@@ -1,1 +1,15 @@
 @import 'tailwindcss';
+
+@layer base {
+    html, body, #app {
+        @apply antialiased min-h-screen text-black text-[14px] w-full;
+    }
+
+    button:disabled, input:disabled, select:disabled {
+        @apply cursor-not-allowed;
+    }
+
+    button {
+        @apply cursor-pointer;
+    }
+}
