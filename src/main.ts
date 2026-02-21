@@ -13,6 +13,14 @@ vue.use(store)
 vue.use(router)
 
 router.isReady()
-    .then(() => {
+    .then((): void => {
+        // Set initial width
+        store.commit('window/SET_WIDTH', window.innerWidth)
+
+        // When user resizing the window
+        window.addEventListener('resize', (): void => {
+            store.commit('window/SET_WIDTH', window.innerWidth)
+        }, false)
+
         vue.mount('#app')
     })
