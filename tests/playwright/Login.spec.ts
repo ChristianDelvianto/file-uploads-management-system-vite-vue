@@ -44,8 +44,10 @@ test.describe('Login page', () => {
 
         const responsePromise = page.waitForResponse('**/auth/tokens')
 
-        await page.getByRole('button', { name: /log in/i }).click()
-        await responsePromise
-        await expect(page).toHaveURL(/user\/recent/i)
+        await Promise.all([
+            page.getByRole('button', { name: /log in/i }).click(),
+            responsePromise,
+        ])
+        await expect(page).toHaveURL(/user\/recent/i, { timeout: 3000 })
     })
 })
