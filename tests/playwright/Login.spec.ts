@@ -2,24 +2,35 @@
 import { test, expect } from '@playwright/test'
 
 test.describe('Login page', () => {
-    test.beforeEach(async ({ page }) => {
+    /**
+     * Ensure login page has email and password inputs
+     */
+    test('has email and password inputs', async ({ page }) => {
+        // Mock check auth response
         await page.route('**/auth/me', route => route.fulfill({
             status: 401,
             contentType: 'application/json',
         }))
 
-        const responsePromise = page.waitForResponse('**/auth/me')
+        const checkAuthPromise = page.waitForResponse('**/auth/me')
 
         await page.goto('/login')
-        await responsePromise
-    })
-
-    test('has email and password inputs', async ({ page }) => {
+        await checkAuthPromise
         await expect(page.getByRole('textbox', { name: /email/i })).toBeVisible()
         await expect(page.getByRole('textbox', { name: /password/i })).toBeVisible()
     })
 
+    /**
+     * Successful login must redirect user
+     */
     test('redirect user when login successfully', async ({ page }) => {
+        // Mock check auth response
+        await page.route('**/auth/me', route => route.fulfill({
+            status: 401,
+            contentType: 'application/json',
+        }))
+
+        // Mock login response
         await page.route('**/auth/tokens', route => route.fulfill({
             status: 200,
             contentType: 'application/json',
@@ -39,15 +50,51 @@ test.describe('Login page', () => {
             })
         }))
 
+        const checkAuthPromise = page.waitForResponse('**/auth/me')
+
+        await page.goto('/login')
+        await checkAuthPromise
         await page.getByRole('textbox', { name: /email/i }).fill('test@example.com')
         await page.getByRole('textbox', { name: /password/i }).fill('password')
 
-        const responsePromise = page.waitForResponse('**/auth/tokens')
+        const loginPromise = page.waitForResponse('**/auth/tokens')
 
         await Promise.all([
             page.getByRole('button', { name: /log in/i }).click(),
-            responsePromise,
+            loginPromise,
         ])
         await expect(page).toHaveURL(/user\/recent/i, { timeout: 3000 })
     })
+
+    /**
+     * Redirect guest to login page when accessing userOnly routes during first load
+     */
+    test('redirect to login page when unauthenticated', async ({ page }) => {
+        // Mock check auth response
+        await page.route('**/auth/me', route => route.fulfill({
+            status: 401,
+            contentType: 'application/json',
+        }))
+
+        const checkAuthPromise = page.waitForResponse('**/auth/me')
+
+        await page.goto('/user/recent')
+        await checkAuthPromise
+        await expect(page).toHaveURL(/login/i, { timeout: 3000 })
+    })
+
+    // /**
+    //  * 
+    //  */
+    // test('', async ({ page }) => {})
+
+    // /**
+    //  * 
+    //  */
+    // test('', async ({ page }) => {})
+
+    // /**
+    //  * 
+    //  */
+    // test('', async ({ page }) => {})
 })
