@@ -1,5 +1,19 @@
 import { ALLOWED_DOCUMENT_TYPES, UPLOAD_FILE_MAX_SIZE } from '@src/const/file'
-import { UploadList } from '@src/stores/modules/file/types'
+import { UploadList, UploadType } from '@src/stores/modules/file/types'
+
+/**
+ * Create anchor link to download the file
+ */
+export function downloadFile(url: string, fileName: string): void {
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', fileName)
+
+    document.body.appendChild(link)
+    link.click()
+
+    link.remove()
+}
 
 /**
  * 
@@ -46,7 +60,14 @@ export async function generateVideoThumbnail(file: File): Promise<File> {
 
             canvas.toBlob((blob): void => {
                 if (blob) {
-                    const thumbnailFile = new File([blob], `thumbnail_${new Date().getTime()}.jpeg`, { type: 'image/jpeg' })
+                    const thumbnailName = `thumbnail_${new Date().getTime()}.jpeg`
+                    const thumbnailFile = new File(
+                                            [blob],
+                                            thumbnailName,
+                                            {
+                                                type: 'image/jpeg',
+                                            }
+                                        )
 
                     resolve(thumbnailFile)
                 } else {
@@ -80,7 +101,7 @@ export async function generateVideoThumbnail(file: File): Promise<File> {
  * @param file 
  * @returns 
  */
-export function createUploadList(fileType: string, fileName: string, file: File): UploadList {
+export function createUploadList(fileType: UploadType, fileName: string, file: File): UploadList {
     return {
         id: new Date().getTime(), 
         type: fileType,
@@ -97,7 +118,7 @@ export function createUploadList(fileType: string, fileName: string, file: File)
  * @param file 
  * @returns 
  */
-export function getFileType(file: File): string | null {
+export function getFileType(file: File): UploadType {
     const type = file.type
 
     if (type.startsWith('image/')) {
@@ -116,11 +137,11 @@ export function getFileType(file: File): string | null {
         return 'document'
     }
 
-    return null
+    return 'other'
 }
 
 /**
- * 
+ * Validate file before inserting into upload list
  * @param file 
  * @returns 
  */
@@ -131,10 +152,14 @@ export function validateFile(file: File): boolean {
     if (!type) {
         console.warn('File type is not defined')
         return false
-    } else if (size > UPLOAD_FILE_MAX_SIZE) {
+    }
+    
+    if (size > UPLOAD_FILE_MAX_SIZE) {
         console.warn('File size exceeds the maximum limit:', size, 'KB')
         return false
-    } else if (type.startsWith('application/') && !ALLOWED_DOCUMENT_TYPES.includes(type)) {
+    }
+    
+    if (type.startsWith('application/') && !ALLOWED_DOCUMENT_TYPES.includes(type)) {
         console.warn('File type is not allowed:', type)
         return false
     }
