@@ -14,9 +14,12 @@ test.describe('Login page', () => {
 
         const checkAuthPromise = page.waitForResponse('**/auth/me')
 
-        await page.goto('/login')
-        await checkAuthPromise
-        await expect(page.getByRole('textbox', { name: /email/i })).toBeVisible()
+        await Promise.all([
+            page.goto('/login'),
+            checkAuthPromise,
+        ])
+        await expect(page).toHaveURL(/login/i)
+        await expect(page.getByRole('textbox', { name: /email/i,  })).toBeVisible()
         await expect(page.getByRole('textbox', { name: /password/i })).toBeVisible()
     })
 
@@ -38,7 +41,7 @@ test.describe('Login page', () => {
                 plan: {
                     id: 1,
                     name: 'Free',
-                    max_size: 1073741824,
+                    max_size: 536870912, // 512 Mb
                 },
                 profile: {
                     id: 1,
@@ -52,8 +55,10 @@ test.describe('Login page', () => {
 
         const checkAuthPromise = page.waitForResponse('**/auth/me')
 
-        await page.goto('/login')
-        await checkAuthPromise
+        await Promise.all([
+            page.goto('/login'),
+            checkAuthPromise,
+        ])
         await page.getByRole('textbox', { name: /email/i }).fill('test@example.com')
         await page.getByRole('textbox', { name: /password/i }).fill('password')
 
@@ -63,7 +68,7 @@ test.describe('Login page', () => {
             page.getByRole('button', { name: /log in/i }).click(),
             loginPromise,
         ])
-        await expect(page).toHaveURL(/user\/recent/i, { timeout: 3000 })
+        await expect(page).toHaveURL(/user\/home/i, { timeout: 3000 })
     })
 
     /**
@@ -78,8 +83,10 @@ test.describe('Login page', () => {
 
         const checkAuthPromise = page.waitForResponse('**/auth/me')
 
-        await page.goto('/user/recent')
-        await checkAuthPromise
+        await Promise.all([
+            page.goto('/user/home'),
+            checkAuthPromise,
+        ])
         await expect(page).toHaveURL(/login/i, { timeout: 3000 })
     })
 
