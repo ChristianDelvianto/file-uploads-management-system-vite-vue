@@ -7,7 +7,6 @@ import FormLabel from '@src/components/form/FormLabel.vue'
 import { useStore } from 'vuex'
 import { useRouter } from 'vue-router'
 import { ref } from 'vue'
-import { isAxiosError } from 'axios'
 const store = useStore()
 const router = useRouter()
 
@@ -20,10 +19,10 @@ const email = ref('')
 const password = ref('')
 const isLoading = ref(false)
 
-async function handleApiError(err: unknown): Promise<void> {
+async function handleSubmitError(err: any): Promise<void> {
     console.error('Error during login:', err)
 
-    if (isAxiosError(err) && err.response?.status === 422) {
+    if (err.response?.status === 422) {
         const apiErrors = err.response.data?.errors ?? {}
 
         Object.entries(apiErrors).forEach(([key, value]) => {
@@ -40,13 +39,13 @@ async function handleSubmit(): Promise<void> {
     errors.value = {}
 
     try {
-        const { profile } = await store.dispatch('auth/login', { email: email.value, password: password.value })
+        const { role } = await store.dispatch('auth/login', { email: email.value, password: password.value })
 
         await router.replace({
-            name: `${profile.role}.dashboard`,
+            name: `${role}.dashboard`,
         })
     } catch (err) {
-        await handleApiError(err)
+        await handleSubmitError(err)
     } finally {
         isLoading.value = false
     }
