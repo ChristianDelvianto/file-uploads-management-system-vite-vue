@@ -1,18 +1,19 @@
 import type { RouteRecordRaw } from 'vue-router'
 import UserLayout from '@src/components/layout/UserLayout.vue'
-import UserRecentPage from '@src/pages/UserRecent.vue'
+import UserHomePage from '@src/pages/UserHome.vue'
 import UserImagesPage from '@src/pages/UserImages.vue'
 import UserAudiosPage from '@src/pages/UserAudios.vue'
 import UserVideosPage from '@src/pages/UserVideos.vue'
 import UserDocumentsPage from '@src/pages/UserDocuments.vue'
 import UserOthersPage from '@src/pages/UserOthers.vue'
 import UserDeletedPage from '@src/pages/UserDeleted.vue'
+import UserLogsPage from '@src/pages/UserLogs.vue'
 
 const recent: RouteRecordRaw = {
     meta: {},
-    path: 'recent',
-    name: 'user.recent',
-    component: UserRecentPage,
+    path: 'home',
+    name: 'user.home',
+    component: UserHomePage,
 }
 
 const image: RouteRecordRaw = {
@@ -57,6 +58,13 @@ const deleted: RouteRecordRaw = {
     component: UserDeletedPage,
 }
 
+const logs: RouteRecordRaw = {
+    meta: {},
+    path: 'logs',
+    name: 'user.logs',
+    component: UserLogsPage,
+}
+
 const root: RouteRecordRaw = {
     meta: {
         guestOnly: false,
@@ -67,7 +75,7 @@ const root: RouteRecordRaw = {
     name: 'user.dashboard',
     component: UserLayout,
     redirect: {
-        name: 'user.recent',
+        name: 'user.home',
     },
     children: [
         recent,
@@ -77,6 +85,9 @@ const root: RouteRecordRaw = {
         document,
         other,
         deleted,
+
+        // account
+        logs,
     ]
 }
 
