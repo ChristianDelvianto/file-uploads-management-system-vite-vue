@@ -10,7 +10,7 @@ const route = useRoute()
 const router = useRouter()
 const { errorCode, isError, isLoading, pageIsError, pageLoading } = usePage()
 
-async function handleApiError(err: any): Promise<void> {
+async function handleCheckAuthError(err: any): Promise<void> {
   console.error('Error checking authentication:', err)
 
   const errCode = err?.response?.status ?? 0
@@ -24,23 +24,23 @@ async function handleApiError(err: any): Promise<void> {
     return
   }
   
-  pageIsError(errCode)
+  await pageIsError(errCode)
 }
 async function checkAuth(): Promise<void> {
-  pageLoading()
+  pageLoading(true)
 
   try {
-    const { profile } = await store.dispatch('auth/check')
+    const { role } = await store.dispatch('auth/check')
 
-    if (route.meta.guestOnly || route.meta.role && route.meta.role !== profile.role) {
+    if (route.meta.guestOnly || route.meta.role && route.meta.role !== role) {
       await router.replace({
-        name: `${profile.role}.dashboard`,
+        name: `${role}.dashboard`,
       })
     }
   } catch (err) {
-    await handleApiError(err)
+    await handleCheckAuthError(err)
   } finally {
-    isLoading.value = false
+    pageLoading(false)
   }
 }
 

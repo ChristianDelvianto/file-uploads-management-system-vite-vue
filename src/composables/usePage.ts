@@ -6,14 +6,19 @@ export const usePage = () => {
     const isError = ref(false)
     const isLoading = ref(false)
 
-    function pageIsError(code: ErrorCode): void {
+    async function pageIsError(code: ErrorCode): Promise<void> {
         isError.value = true
         errorCode.value = code
+
+        return Promise.resolve()
     }
-    function pageLoading(): void {
-        isLoading.value = true
-        isError.value = false
-        errorCode.value = 0
+    function pageLoading(value: boolean): void {
+        isLoading.value = value
+
+        if (value) {
+            isError.value = false
+            errorCode.value = 0
+        }
     }
 
     return {
