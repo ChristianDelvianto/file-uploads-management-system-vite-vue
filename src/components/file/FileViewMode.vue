@@ -4,7 +4,7 @@ import IconMDIViewGridOutline from '@src/components/svg/mdi/ViewGridOutline.vue'
 import { ViewMode as FileViewMode } from '@src/stores/modules/file/types'
 
 defineEmits<{
-    (eventName: 'update:view-mode', viewMode: FileViewMode): void
+    (eventName: 'update', viewMode: FileViewMode): void
 }>()
 
 withDefaults(defineProps<{
@@ -15,12 +15,10 @@ withDefaults(defineProps<{
 </script>
 
 <template>
-    <div
-        class="flex flex-grow-0 flex-row flex-shrink items-center"
-    >
-        <!-- List mode -->
+    <div class="flex flex-grow-0 flex-row flex-shrink items-center">
+        <!-- List -->
         <button
-            @click="$emit('update:view-mode', 'list')"
+            @click="$emit('update', 'list')"
             :class="{
                 'bg-white border-stone-300 z-[0]': viewMode === 'grid',
                 'bg-blue-300/60 border-blue-600/60 z-[1]': viewMode === 'list',
@@ -32,9 +30,9 @@ withDefaults(defineProps<{
             />
         </button>
 
-        <!-- Grid mode -->
+        <!-- Grid -->
         <button
-            @click="$emit('update:view-mode', 'grid')"
+            @click="$emit('update', 'grid')"
             :class="{
                 'bg-blue-300/60 border-blue-600/60 z-[1]': viewMode === 'grid',
                 'bg-white border-stone-300 z-[0]': viewMode === 'list',
