@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import IconMDIAccessTime from '@src/components/svg/mdi/AccessTime.vue'
 import IconMDIBinOutline from '@src/components/svg/mdi/BinOutline.vue'
-import IconMDIClose from '@src/components/svg/mdi/Close.vue'
 import IconMDIFileEditOutline from '@src/components/svg/mdi/FileEditOutline.vue'
+import IconMDIFileRestoreOutline from '@src/components/svg/mdi/FileRestoreOutline.vue'
 import IconMDIInformationOutline from '@src/components/svg/mdi/InformationOutline.vue'
+import IconMDILockOutline from '@src/components/svg/mdi/LockOutline.vue'
 import IconMDIShareVariantOutline from '@src/components/svg/mdi/ShareVariantOutline.vue'
 import IconMDITrayDownload from '@src/components/svg/mdi/TrayDownload.vue'
 import { FileDB, ViewMode } from '@src/stores/modules/file/types'
@@ -14,17 +15,8 @@ const store = useStore()
 
 defineEmits<{
     (eventName: 'close'): void,
-    (eventName: 'open:delete-modal'): void,
-    (eventName: 'open:edit-modal'): void,
+    (eventName: 'open-modal', modalName: string): void,
 }>()
-
-const props = withDefaults(defineProps<Readonly<{
-    // $props.enableRestore should be set when user in deleted route
-    // To enable restore deleted file
-    enableRestore?: boolean,
-}>>(), {
-    enableRestore: false,
-})
 
 const file = inject<Readonly<FileDB>>('file')
 const viewMode = inject<ComputedRef<Readonly<ViewMode>>>('viewMode')
@@ -47,59 +39,75 @@ async function download(): Promise<void> {
 <template>
     <div
         :class="{
-            'md:right-10': viewMode === 'grid',
-            'md:right-9': viewMode === 'list',
+            'md:right-8 md:-top-2': viewMode === 'grid',
+            'md:right-6 md:-top-3': viewMode === 'list',
         }"
-        class="bg-gray-900/80 fixed flex inset-0 items-end w-full z-[2]
-        md:absolute md:bg-transparent md:inset-auto md:top-0 md:w-72"
+        class="bg-black/80 fixed flex inset-0 items-end p-3 w-full z-[2]
+        md:absolute md:bg-transparent md:inset-auto md:w-72"
     >
+        <!-- Click to close -->
+        <button
+            @click="$emit('close')"
+            type="button"
+            class="absolute bg-transparent inset-0 z-1
+            md:hidden"
+            title="View this file"
+        >
+            <span class="hidden">Close</span>
+        </button>
+
         <div
-            class="bg-white flex flex-col pb-3 pt-3 rounded-t-xl w-full
-            md:border md:border-stone-300 md:overflow-hidden md:py-0 md:rounded-xl md:shadow-md md:shadow-stone-300/60"
+            class="bg-white flex flex-col pb-3 rounded-xl w-full z-[2]
+            md:border md:border-stone-300 md:overflow-hidden md:pb-0 md:shadow-md md:shadow-stone-300/60"
         >
             <div
                 class="flex flex-row items-center justify-end px-3
                 md:hidden"
             >
-                <button
-                    @click="$emit('close')"
-                    class="rounded p-1.5
-                    hover:bg-gray-300/60"
-                >
-                    <IconMDIClose :size="20" />
-                </button>
+                <!--  -->
             </div>
 
             <div class="flex flex-col p-3">
                 <button
                     @click="{}"
                     type="button"
-                    class="border-b border-stone-300 flex flex-grow flex-shrink gap-3 items-center px-1.5 p-2 text-lg
-                    hover:bg-stone-300"
+                    class="flex flex-grow flex-shrink gap-4 items-center p-2 rounded-xl text-lg
+                    hover:bg-stone-300/30"
                 >
                     <IconMDIInformationOutline />
 
                     Detail
                 </button>
 
-                <template v-if="$props.enableRestore">
+                <template v-if="file.deleted_at">
                     <button
                         @click="{}"
                         type="button"
-                        class="border-b border-stone-300 flex flex-grow flex-shrink gap-3 items-center px-1.5 p-2 text-lg
-                        hover:bg-stone-300"
+                        class="flex flex-grow flex-shrink gap-4 items-center p-2 rounded-xl text-lg
+                        hover:bg-stone-300/30"
                     >
-                        <IconMDIBin />
+                        <IconMDIBinOutline />
+
+                        Delete permanently
+                    </button>
+
+                    <button
+                        @click="$emit('open-modal', 'restore')"
+                        type="button"
+                        class="flex flex-grow flex-shrink gap-4 items-center p-2 rounded-xl text-lg
+                        hover:bg-stone-300/30"
+                    >
+                        <IconMDIFileRestoreOutline />
 
                         Restore
                     </button>
                 </template>
                 <template v-else>
                     <button
-                        @click="download"
+                        @click="{}"
                         type="button"
-                        class="border-b border-stone-300 flex flex-grow flex-shrink gap-3 items-center px-1.5 p-2 text-lg
-                        hover:bg-stone-300"
+                        class="flex flex-grow flex-shrink gap-4 items-center p-2 rounded-xl text-lg
+                        hover:bg-stone-300/30"
                     >
                         <IconMDIAccessTime />
 
@@ -107,12 +115,12 @@ async function download(): Promise<void> {
                     </button>
 
                     <button
-                        @click="download"
+                        @click="{}"
                         type="button"
-                        class="border-b border-stone-300 flex flex-grow flex-shrink gap-3 items-center px-1.5 p-2 text-lg
-                        hover:bg-stone-300"
+                        class="flex flex-grow flex-shrink gap-4 items-center p-2 rounded-xl text-lg
+                        hover:bg-stone-300/30"
                     >
-                        <IconMDITrayDownload />
+                        <IconMDILockOutline />
 
                         Manage access
                     </button>
@@ -120,8 +128,8 @@ async function download(): Promise<void> {
                     <button
                         @click="download"
                         type="button"
-                        class="border-b border-stone-300 flex flex-grow flex-shrink gap-3 items-center px-1.5 p-2 text-lg
-                        hover:bg-stone-300"
+                        class="flex flex-grow flex-shrink gap-4 items-center p-2 rounded-xl text-lg
+                        hover:bg-stone-300/30"
                     >
                         <IconMDITrayDownload />
 
@@ -129,10 +137,10 @@ async function download(): Promise<void> {
                     </button>
 
                     <button
-                        @click="download"
+                        @click="{}"
                         type="button"
-                        class="border-b border-stone-300 flex flex-grow flex-shrink gap-3 items-center px-1.5 p-2 text-lg
-                        hover:bg-stone-300"
+                        class="flex flex-grow flex-shrink gap-4 items-center p-2 rounded-xl text-lg
+                        hover:bg-stone-300/30"
                     >
                         <IconMDIShareVariantOutline />
 
@@ -140,10 +148,10 @@ async function download(): Promise<void> {
                     </button>
 
                     <button
-                        @click="$emit('open:delete-modal')"
+                        @click="$emit('open-modal', 'delete')"
                         type="button"
-                        class="border-b border-stone-300 flex flex-grow flex-shrink gap-3 items-center px-1.5 p-2 text-lg
-                        hover:bg-stone-300"
+                        class="flex flex-grow flex-shrink gap-4 items-center p-2 rounded-xl text-lg
+                        hover:bg-stone-300/30"
                     >
                         <IconMDIBinOutline />
 
@@ -151,10 +159,10 @@ async function download(): Promise<void> {
                     </button>
 
                     <button
-                        @click="$emit('open:edit-modal')"
+                        @click="$emit('open-modal', 'edit')"
                         type="button"
-                        class="border-b border-stone-300 flex flex-grow flex-shrink gap-3 items-center px-1.5 p-2 text-lg
-                        hover:bg-stone-300"
+                        class="flex flex-grow flex-shrink gap-4 items-center p-2 rounded-xl text-lg
+                        hover:bg-stone-300/30"
                     >
                         <IconMDIFileEditOutline />
 
