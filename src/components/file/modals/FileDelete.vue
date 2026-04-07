@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import Button from '@src/components/ui/Button.vue'
-import { FileDB } from '@src/stores/modules/file/types'
 import Api from '@src/services'
+import { FileDB } from '@src/stores/modules/file/types'
 import { ref, watch } from 'vue'
 
 const emit = defineEmits<{
     (eventName: 'close'): void,
-    (eventName: 'delete:file', uuid: string): void,
+    (eventName: 'delete-file', uuid: string): void,
 }>()
 
 const props = withDefaults(defineProps<Readonly<{
@@ -35,7 +35,7 @@ async function deleteFile(): Promise<void> {
     try {
         await Api.delete(`/files/${props.file!.uuid}`)
 
-        emit('delete:file', props.file!.uuid)
+        emit('delete-file', props.file!.uuid)
     } catch (err: any) {
         console.warn('Error when deleting file:')
         console.error(err)
@@ -59,21 +59,21 @@ watch(() => props.open, (newValue) => {
 <template>
     <div
         v-if="$props.open"
-        class="bg-gray-900/80 flex fixed inset-0 items-end z-10
-        md:items-center md:justify-center"
+        class="bg-black/80 flex fixed inset-0 items-end p-3 z-10
+        md:items-center md:justify-center md:p-0"
     >
         <!-- Click to close -->
         <button
             @click="close"
             type="button"
             class="absolute bg-transparent inset-0 z-1"
-            title="View this file"
+            title="Close"
         >
             <span class="hidden">Close</span>
         </button>
 
         <div
-            class="bg-white flex flex-col gap-1.5 p-3 relative rounded-t-xl w-full z-[2]
+            class="bg-white flex flex-col gap-1.5 p-6 relative rounded-xl w-full z-[2]
             md:max-w-md md:p-9 md:rounded-3xl"
         >
             <div>
@@ -83,21 +83,21 @@ watch(() => props.open, (newValue) => {
             </div>
 
             <div
-                class="flex flex-col-reverse flex-grow flex-shrink gap-3
-                md:flex-row"
+                class="flex flex-col flex-grow flex-shrink gap-3
+                md:flex-row-reverse"
             >
-                <Button
-                    @click="close"
-                    :disabled="isLoading"
-                    class="flex-grow flex-shrink font-semibold rounded-full! text-lg"
-                >Cancel</Button>
-
                 <Button
                     @click="deleteFile"
                     :disabled="isLoading"
                     level="danger"
                     class="flex-grow flex-shrink font-semibold rounded-full! text-lg"
                 >Delete</Button>
+
+                <Button
+                    @click="close"
+                    :disabled="isLoading"
+                    class="flex-grow flex-shrink font-semibold rounded-full! text-lg"
+                >Cancel</Button>
             </div>
         </div>
     </div>
