@@ -2,8 +2,8 @@
 @import 'tailwindcss';
 
 img, video {
-    @apply h-auto max-h-[calc(100vh-4rem)] mx-auto relative select-none z-10
-            sm:max-h-[calc(100vh-7rem)];
+    @apply select-none z-10;
+            /* sm:max-h-[calc(100vh-7rem)]; */
 
     /* block-size: inherit !important; */
 }
@@ -14,10 +14,10 @@ img {
 </style>
 
 <script setup lang="ts">
-import FileEditLayout from './FileViewerEditLayout.vue'
-import FileDetailLayout from './FileViewerDetailLayout.vue'
-import FileLogLayout from './FileViewerLogLayout.vue'
 import FileViewerMenu from './FileViewerMenu.vue'
+import FileViewerEditLayout from './FileViewerEditLayout.vue'
+import FileViewerDetailLayout from './FileViewerDetailLayout.vue'
+import FileViewerLogLayout from './FileViewerLogLayout.vue'
 import FileViewerNavigation from './FileViewerNavigation.vue'
 import { useAuth } from '@src/composables/useAuth'
 import { useWindow } from '@src/composables/useWindow'
@@ -31,7 +31,7 @@ const { windowWidth } = useWindow()
 
 defineEmits<{
     (eventName: 'close'): void,
-    (eventName: 'update:file', value: FileDB): void,
+    (eventName: 'update-file', value: FileDB): void,
 }>()
 
 const props = withDefaults(defineProps<Readonly<{
@@ -74,9 +74,11 @@ async function download(): Promise<void> {
     try {
         const url = await store.dispatch('file/getDownloadLink', props.file.uuid)
 
-        downloadFile(url, props.file.name)
+        const fileName = props.file.name + '.' + props.file.extension
+
+        downloadFile(url, fileName)
     } catch (err) {
-        console.warn('Error while attempting to download')
+        window.alert('Error while attempting to download')
     }
 }
 function loadError(event: Event): void {
@@ -107,12 +109,13 @@ watch(() => props.open, (newValue) => {
     if (newValue) {
         document.body.style['overflowY'] = 'hidden'
 
-        if (!props.file.deleted_at) { // Non-deleted file
+        // Non-deleted file
+        if (props.file && !props.file.deleted_at) {
             // Send XHR request
             store.dispatch('file/storeViewLog', props.file.uuid)
         }
     } else {
-        // Reset all layout to fall
+        // Reset all layout to false
         toggleLayout(null)
 
         document.body.style['overflowY'] = 'auto'
@@ -130,30 +133,28 @@ onBeforeUnmount((): void => {
     <div
         v-if="!$props.asModal || $props.asModal && $props.open"
         :class="{
-            'bg-gray-900/80 fixed inset-0 z-60': $props.asModal,
+            'bg-black/80 fixed inset-0 z-60': $props.asModal,
             'bg-black': !$props.asModal,
         }"
         class="min-h-screen"
     >
-        <div class="flex flex-grow flex-row flex-shrink">
-            <div class="flex flex-col flex-grow flex-shrink overflow-ellipsis overflow-hidden w-full">
+        <div class="flex flex-grow flex-row flex-shrink h-full">
+            <div class="flex flex-col flex-grow flex-shrink h-full overflow-ellipsis overflow-hidden w-full">
                 <!-- Navigation -->
                 <FileViewerNavigation
                     @close="$emit('close')"
                     @download="download"
-                    @open:detail-layout="toggleLayout('detail')"
-                    @open:edit-layout="toggleLayout('edit')"
-                    @open:log-layout="toggleLayout('log')"
-                    @open:menu-layout="toggleLayout('menu')"
+                    @open-layout="toggleLayout"
                 />
 
                 <div class="flex flex-grow flex-shrink h-[calc(100vh-4rem)] items-center w-full z-10">
                     <!-- Click to close -->
-                    <div
+                    <button
                         v-if="$props.asModal"
                         @click="$emit('close')"
+                        type="button"
                         class="bg-transparent bottom-0 fixed h-[inherit] w-full z-0"
-                    ></div>
+                    ></button>
 
                     <audio
                         v-if="file.category === 'audio'"
@@ -172,8 +173,8 @@ onBeforeUnmount((): void => {
                         @contextmenu="$event => $event.preventDefault()"
                         :src="file.storage_url"
                         draggable="false"
-                        class="w-full
-                        md:h-inherit md:mx-auto md:w-auto"
+                        class="max-h-full w-full
+                        md:h-[calc(100%-3rem)] md:max-h-auto md:mx-auto md:w-auto"
                     />
                     <video
                         v-else-if="file.category === 'video'"
@@ -185,24 +186,24 @@ onBeforeUnmount((): void => {
                         controlsList="nodownload nofullscreen"
                         playsinline="true"
                         preload="metadata"
-                        class="
-                        md:h-inherit md:mx-auto"
+                        class="max-h-full
+                        md:h-[calc(100%-3rem)] md:max-h-auto md:mx-auto"
                     />
                 </div>
             </div>
 
-            <FileDetailLayout
+            <FileViewerDetailLayout
                 @close="toggleLayout(null)"
                 :file="file"
                 :open="fileLayout.detail"
             />
-            <FileEditLayout
+            <FileViewerEditLayout
                 @close="toggleLayout(null)"
-                @update:file="{}"
+                @update-file="{}"
                 :file="file"
                 :open="fileLayout.edit"
             />
-            <FileLogLayout
+            <FileViewerLogLayout
                 @close="toggleLayout(null)"
                 :open="authenticated && profile.id === file.user.id && fileLayout.log"
                 :uuid="file.uuid"
