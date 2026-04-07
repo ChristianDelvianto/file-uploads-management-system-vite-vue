@@ -104,7 +104,7 @@ watch(() => route.name, (): void => {
                     md:flex md:w-1/2"
                 >
                     <div
-                        class="bg-stone-300/30 border border-stone-300 flex items-center rounded-full h-12 px-3 mx-auto w-full
+                        class="bg-stone-300/20 border border-stone-300 flex items-center rounded-full h-12 px-3 mx-auto w-full
                         md:max-w-lg"
                     >
                         <button

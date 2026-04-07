@@ -40,7 +40,7 @@ function createInputFile(): void {
 <template>
     <aside
         class="bg-white flex flex-col h-[calc(100vh-4rem)] overflow-y-auto py-3
-        md:gap-1.5 md:h-[calc(100vh-3.75rem)] md:pt-0"
+        md:gap-1.5 md:pt-0"
     >
         <div
             class="border-b border-stone-300 hidden pb-3 px-3
