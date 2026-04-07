@@ -2,7 +2,7 @@
 @import 'tailwindcss';
 
 .thumbnail {
-    @apply bg-gray-300 flex flex-grow-0 flex-shrink-0 items-center justify-center overflow-hidden relative;
+    @apply flex flex-grow-0 flex-shrink-0 items-center justify-center overflow-hidden relative;
 }
 
     .thumbnail::before {
@@ -14,18 +14,15 @@
 
 <script setup lang="ts">
 import IconMDIDotsVertical from '@src/components/svg/mdi/DotsVertical.vue'
-import IconMDIImage from '@src/components/svg/mdi/Image.vue'
-import IconMDIMusic from '@src/components/svg/mdi/Music.vue'
-import IconMDIPlayCircle from '@src/components/svg/mdi/PlayCircle.vue'
-import IconMDIVideo from '@src/components/svg/mdi/Video.vue'
+import IconMDILockOutline from '@src/components/svg/mdi/LockOutline.vue'
+import IconMDIPublic from '@src/components/svg/mdi/Public.vue'
 import FileCardMenu from '@src/components/file/FileCardMenu.vue'
+import { useFileCard } from '@src/composables/useFileCard'
 import { FileDB, ViewMode } from '@src/stores/modules/file/types'
-import { computed, provide, ref } from 'vue'
+import { computed, onBeforeUnmount, provide, ref } from 'vue'
 
-defineEmits<{
-    (eventName: 'open:delete-modal'): void,
-    (eventName: 'open:edit-modal'): void,
-    (eventName: 'open:view-modal'): void,
+const emit = defineEmits<{
+    (eventName: 'open-modal', modalName: string): void,
 }>()
 
 const props = withDefaults(defineProps<Readonly<{
@@ -35,30 +32,17 @@ const props = withDefaults(defineProps<Readonly<{
     viewMode: 'grid',
 })
 
+const imageElement = ref()
 const imageLoaded = ref(false)
 const isMenuOpen = ref(false)
 
-const fileIcon = computed(() => {
-    if (props.file.category === 'audio') {
-        return IconMDIMusic
-    }
-
-    if (props.file.category === 'image') {
-        return IconMDIImage
-    }
-
-    if (props.file.category === 'video') {
-        return IconMDIVideo
-    }
-
-    return IconMDIImage
-})
-const imageURL = computed(() => {
-    return props.file.thumbnail_url ?? props.file.storage_url
-})
-const showImage = computed(() => {
-    return (props.file.thumbnail_url || props.file.category === 'image')
-})
+const {
+    fileIcon,
+    fileName,
+    fileSize,
+    imageURL,
+    showImage,
+} = useFileCard(props.file)
 
 provide('file', props.file)
 provide('viewMode', computed(() => props.viewMode)) // Has to be 'computed', otherwise, it's not reactive
@@ -70,39 +54,55 @@ function loadImage(event: Event): void {
         imageLoaded.value = true
     }
 }
+function openModal(modalName: string): void {
+    isMenuOpen.value = false
+
+    emit('open-modal', modalName)
+}
+function removeImageSrc(): void {
+    if (showImage.value) {
+        imageElement.value?.removeAttribute('src')
+    }
+}
+
+onBeforeUnmount((): void => {
+    // Cancel image loading when component is unmounted,
+    // Saves memory and prevents unnecessary work by browser
+    removeImageSrc()
+})
 </script>
 
 <template>
     <div
-        :data-testid="file.uuid"
         :class="{
-            'border border-stone-300/90 flex-col-reverse rounded-lg shadow shadow-stone-300/90': viewMode === 'grid',
-            'flex-row gap-3 items-center p-3 md:rounded-xl md:shadow md:shadow-stone-300/90': viewMode === 'list',
+            'border border-stone-600/30 flex-col-reverse rounded-xl shadow-lg shadow-stone-600/30': viewMode === 'grid',
+            'flex-row gap-3 items-center p-3 md:rounded-xl md:shadow-lg md:shadow-stone-600/15': viewMode === 'list',
         }"
         class="bg-white flex flex-grow-0 flex-shrink relative w-full"
     >
         <!-- Button to covering entire element, easy for user to click - to open file viewer -->
         <button
-            @click="$emit('open:view-modal')"
+            @click="openModal('view')"
             :data-testid="`view-button-${file.uuid}`"
             type="button"
             class="absolute bg-transparent inset-0 z-1"
-            title="View this file"
+            title="View file"
         >
-            <span class="hidden">View this file</span>
+            <span class="hidden">View file</span>
         </button>
 
         <div
             :class="{
                 'rounded-b-lg pb-[75%] w-full': viewMode === 'grid',
-                'rounded-lg size-16': viewMode === 'list',
-                'animate-pulse': showImage && !imageLoaded,
+                'rounded-lg size-12': viewMode === 'list',
+                'animate-pulse bg-gray-300': showImage && !imageLoaded,
             }"
             class="thumbnail"
         >
             <img
                 v-if="showImage"
                 @load="loadImage"
+                ref="imageElement"
                 :src="imageURL"
                 alt=""
                 draggable="false"
@@ -110,7 +110,7 @@ function loadImage(event: Event): void {
             />
             <div
                 v-else
-                class="absolute flex flex-grow-0 flex-shrink-0 inset-0 items-center justify-center"
+                class="absolute bg-gray-300/60 flex flex-grow-0 flex-shrink-0 inset-0 items-center justify-center"
             >
                 <component
                     color="#155DFC"
@@ -121,14 +121,10 @@ function loadImage(event: Event): void {
             </div>
 
             <span
-                v-if="file.category === 'video'"
-                :class="{
-                    'bottom-1.5 right-1.5': viewMode === 'grid',
-                    'bottom-[calc(50%-15.75px)] left-[calc(50%-15.75px)]': viewMode === 'list',
-                }"
-                class="absolute bg-gray-600/30 flex flex-grow-0 flex-shrink items-center justify-center rounded-full size-9"
+                v-if="file.visibility === 'public' && viewMode === 'grid'"
+                class="absolute bg-gray-600/30 bottom-1.5 flex flex-grow-0 flex-shrink items-center justify-center right-1.5 rounded-full size-9"
             >
-                <IconMDIPlayCircle
+                <IconMDIPublic
                     color="#FFF"
                     :size="20"
                 />
@@ -137,8 +133,8 @@ function loadImage(event: Event): void {
 
         <div
             :class="{
-                'max-w-full': viewMode === 'grid',
-                'max-w-[calc(100%-4.75rem)]': viewMode === 'list',
+                'border-b border-stone-300 max-w-full': viewMode === 'grid',
+                'max-w-[calc(100%-3.75rem)]': viewMode === 'list',
             }"
             class="flex flex-grow flex-shrink items-center overflow-ellipsis w-full"
         >
@@ -156,9 +152,49 @@ function loadImage(event: Event): void {
                 />
 
                 <div
-                    v-text="file.name"
-                    class="leading-snug overflow-ellipsis overflow-hidden whitespace-nowrap w-full"
-                ></div>
+                    :class="{
+                        'flex flex-grow flex-col gap-0.5 lg:flex-row lg:gap-0 lg:items-center': viewMode === 'list',
+                    }"
+                    class="overflow-ellipsis overflow-hidden"
+                >
+                    <div
+                        v-text="fileName"
+                        :class="{
+                            'font-semibold lg:flex-grow-0 lg:flex-shrink-0 lg:max-w-3/5': viewMode === 'list',
+                        }"
+                        class="leading-snug overflow-ellipsis overflow-hidden whitespace-nowrap w-full"
+                    ></div>
+
+                    <div
+                        v-if="viewMode === 'list'"
+                        class="flex flex-grow flex-row items-center"
+                    >
+                        <div
+                            class="flex flex-grow-0 flex-row flex-shrink gap-1.5 items-center
+                            lg:w-1/2"
+                        >
+                            <template v-if="file.visibility === 'private'">
+                                <IconMDILockOutline :size="18" />
+
+                                Private
+                            </template>
+                            <template v-else-if="file.visibility === 'public'">
+                                <IconMDIPublic :size="18" />
+
+                                Public
+                            </template>
+
+                            <!-- Shared -->
+                        </div>
+
+                        <div
+                            class="
+                            md:w-1/2"
+                        >
+                            {{ fileSize }}
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div
@@ -171,8 +207,8 @@ function loadImage(event: Event): void {
                     @click="isMenuOpen = !isMenuOpen"
                     type="button"
                     class="flex flex-grow-0 flex-shrink-0 items-center justify-center relative rounded-full size-9 z-1
-                    focus:bg-stone-300/90
-                    hover:bg-stone-300/90"
+                    focus:bg-stone-300
+                    hover:bg-stone-300"
                 >
                     <IconMDIDotsVertical :size="20" />
                 </button>
@@ -180,8 +216,7 @@ function loadImage(event: Event): void {
                 <FileCardMenu
                     v-if="isMenuOpen"
                     @close="isMenuOpen = false"
-                    @open:delete-modal="$emit('open:delete-modal')"
-                    @open:edit-modal="$emit('open:edit-modal')"
+                    @open-modal="openModal"
                 />
             </div>
         </div>
