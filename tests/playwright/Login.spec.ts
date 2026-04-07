@@ -3,6 +3,25 @@ import { test, expect } from '@playwright/test'
 
 test.describe('Login page', () => {
     /**
+     * Redirect guest to login page when accessing userOnly routes during first load
+     */
+    test('redirect to login page when unauthenticated', async ({ page }) => {
+        // Mock check auth response
+        await page.route('**/auth/me', route => route.fulfill({
+            status: 401,
+            contentType: 'application/json',
+        }))
+
+        const checkAuthPromise = page.waitForResponse('**/auth/me')
+
+        await Promise.all([
+            page.goto('/user/home'),
+            checkAuthPromise,
+        ])
+        await expect(page).toHaveURL(/login/i)
+    })
+
+    /**
      * Ensure login page has email and password inputs
      */
     test('has email and password inputs', async ({ page }) => {
@@ -19,7 +38,7 @@ test.describe('Login page', () => {
             checkAuthPromise,
         ])
         await expect(page).toHaveURL(/login/i)
-        await expect(page.getByRole('textbox', { name: /email/i,  })).toBeVisible()
+        await expect(page.getByRole('textbox', { name: /email/i })).toBeVisible()
         await expect(page.getByRole('textbox', { name: /password/i })).toBeVisible()
     })
 
@@ -68,40 +87,6 @@ test.describe('Login page', () => {
             page.getByRole('button', { name: /log in/i }).click(),
             loginPromise,
         ])
-        await expect(page).toHaveURL(/user\/home/i, { timeout: 3000 })
+        await expect(page).toHaveURL(/user\/home/i)
     })
-
-    /**
-     * Redirect guest to login page when accessing userOnly routes during first load
-     */
-    test('redirect to login page when unauthenticated', async ({ page }) => {
-        // Mock check auth response
-        await page.route('**/auth/me', route => route.fulfill({
-            status: 401,
-            contentType: 'application/json',
-        }))
-
-        const checkAuthPromise = page.waitForResponse('**/auth/me')
-
-        await Promise.all([
-            page.goto('/user/home'),
-            checkAuthPromise,
-        ])
-        await expect(page).toHaveURL(/login/i, { timeout: 3000 })
-    })
-
-    // /**
-    //  * 
-    //  */
-    // test('', async ({ page }) => {})
-
-    // /**
-    //  * 
-    //  */
-    // test('', async ({ page }) => {})
-
-    // /**
-    //  * 
-    //  */
-    // test('', async ({ page }) => {})
 })
