@@ -2,7 +2,9 @@
 withDefaults(defineProps<Readonly<{
     errorMessage?: string,
     disabled?: boolean,
+    id?: string,
     placeholder?: string,
+    testId?: string,
     type?: 'email' | 'password' | 'search' | 'text' | 'url',
 }>>(), {
     disabled: false,
@@ -18,7 +20,9 @@ const model = defineModel({
 <template>
     <input
         v-model="model"
+        :data-testid="$props.testId"
         :type="$props.type"
+        :id="$props.id"
         :disabled="$props.disabled"
         :placeholder="$props.placeholder"
         :class="{

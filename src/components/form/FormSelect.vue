@@ -2,9 +2,10 @@
 const props = withDefaults(defineProps<Readonly<{
     errorMessage?: string,
     disabled?: boolean,
-    modelValue?: string,
+    modelValue: string,
     name?: string,
     options: string[],
+    testId?: string,
 }>>(), {
     disabled: false,
 })
@@ -18,7 +19,7 @@ const emit = defineEmits<{
 //     required: true,
 // })
 
-function handleChange(event: InputEvent): void {
+function handleChange(event: Event): void {
     if (!props.disabled) {
         emit('update:modelValue', (event.target as HTMLSelectElement).value)
     }
@@ -28,6 +29,8 @@ function handleChange(event: InputEvent): void {
 <template>
     <select
         @change="handleChange"
+        :data-testid="$props.testId"
+        :value="$props.modelValue"
         :name="$props.name"
         :disabled="$props.disabled"
         :class="{
@@ -38,6 +41,7 @@ function handleChange(event: InputEvent): void {
     >
         <option
             v-for="option in $props.options"
+            :key="option"
             :value="option"
             :selected="$props.modelValue === option"
             class="block text-center"
