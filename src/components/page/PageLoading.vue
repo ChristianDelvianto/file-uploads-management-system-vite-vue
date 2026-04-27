@@ -4,6 +4,9 @@ import IconMDILoading from '@src/components/svg/mdi/Loading.vue'
 
 <template>
     <div class="flex items-center justify-center p-6">
-        <IconMDILoading :size="64" />
+        <IconMDILoading
+            color="#000"
+            :size="64"
+        />
     </div>
 </template>

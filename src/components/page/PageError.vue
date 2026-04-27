@@ -1,58 +1,59 @@
 <script setup lang="ts">
 import Button from '@src/components/ui/Button.vue'
-import IconMDIError from '@src/components/svg/mdi/Error.vue'
-import { ErrorCode } from '@src/types/page'
+import IconMDIErrorOutline from '@src/components/svg/mdi/ErrorOutline.vue'
 import { useStore } from 'vuex'
 import { useRouter } from 'vue-router'
 const store = useStore()
 const router = useRouter()
 
 defineEmits<{
-    (eventName: 'retry'): void,
+    (eventName: 'retry'): void
 }>()
 
 const props = withDefaults(defineProps<Readonly<{
-    errorCode: ErrorCode,
+    errorCode: number
 }>>(), {
-    errorCode: 0,
+    errorCode: 0
 })
 
 const message = {
-    0: 'Sorry, something went wrong [Code 0]', // Default
+    0: 'Sorry, something went wrong, please try again', // Default
     400: 'Bad request',
-    401: 'It seems that you are not logged in, please log in to access this page',
-    403: 'Sorry, you are not allowed to access this page',
-    404: 'Oopps, sorry but page not found',
-    500: 'Internal server error, please try again',
+    401: 'It seems that you are not logged in, please log in to access to continue',
+    403: 'Sorry, you are not allowed to access this',
+    404: 'Opps, sorry but page not found',
+    500: 'Internal server error, please try again'
 }[props.errorCode]
 
 async function toLoginPage(): Promise<void> {
-    store.dispatch('auth/logout')
+    store.dispatch('auth/loggedOut')
 
     await router.push('/login')
         .then(() => {
-            store.dispatch('auth/loggedOut')
+            store.dispatch('auth/logout')
         })
 }
 </script>
 
 <template>
-    <div
-        role="alert"
-        class="flex flex-col gap-y-3 items-center justify-center p-6"
-    >
-        <IconMDIError :size="64" />
+    <div class="flex flex-col gap-y-3 items-center justify-center p-6">
+        <IconMDIErrorOutline :size="64" />
 
-        <div class="text-center">{{ message }}</div>
+        <div
+            role="alert"
+            class="text-center"
+        >{{ message }}</div>
 
         <Button
-            v-if="$props.errorCode === 401"
+            v-if="errorCode === 401"
             @click="toLoginPage"
             level="neutral"
-        >To log in</Button>
+            class="border-stone-600/80! rounded-full!"
+        >Log in</Button>
         <Button
-            v-else-if="$props.errorCode !== 404"
+            v-else-if="errorCode !== 403 && errorCode !== 404"
             @click="$emit('retry')"
+            class="border-stone-600/80! rounded-full!"
         >Try again</Button>
     </div>
 </template>
