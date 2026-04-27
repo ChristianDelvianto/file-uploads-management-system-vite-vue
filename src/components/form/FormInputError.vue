@@ -3,18 +3,18 @@ import IconMDIError from '@src/components/svg/mdi/Error.vue'
 
 defineProps<Readonly<{
     msg: string,
-    testId?: string,
+    testId?: string
 }>>()
 </script>
 
 <template>
     <div
-        :data-testid="$props.testId"
+        :data-testid="testId"
         role="alert"
         class="flex flex-row gap-1.5 items-center text-red-600"
     >
         <IconMDIError :size="16" />
         
-        {{ $props.msg }}
+        {{ msg }}
     </div>
 </template>

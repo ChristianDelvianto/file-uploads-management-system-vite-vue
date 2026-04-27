@@ -5,29 +5,29 @@ withDefaults(defineProps<Readonly<{
     id?: string,
     placeholder?: string,
     testId?: string,
-    type?: 'email' | 'password' | 'search' | 'text' | 'url',
+    type?: 'email' | 'password' | 'search' | 'text' | 'url'
 }>>(), {
     disabled: false,
-    type: 'text',
+    type: 'text'
 })
 
 const model = defineModel({
     type: String,
-    required: true,
+    required: true
 })
 </script>
 
 <template>
     <input
         v-model="model"
-        :data-testid="$props.testId"
-        :type="$props.type"
-        :id="$props.id"
-        :disabled="$props.disabled"
-        :placeholder="$props.placeholder"
+        :data-testid="testId"
+        :type="type"
+        :id="id"
+        :disabled="disabled"
+        :placeholder="placeholder"
         :class="{
-            'bg-red-100 border-red-600 focus:border-red-600 focus:outline-red-300': $props.errorMessage,
-            'bg-white border-stone-300 focus:border-blue-600 focus:outline-blue-300': !$props.errorMessage,
+            'bg-red-100 border-red-600 focus:border-red-600 focus:outline-red-300': errorMessage,
+            'bg-white border-stone-300 focus:border-blue-600 focus:outline-blue-300': !errorMessage,
         }"
         class="border duration-300 ease-in-out px-3 py-1.5 rounded-lg transition-all
         focus:bg-white focus:outline-4"
