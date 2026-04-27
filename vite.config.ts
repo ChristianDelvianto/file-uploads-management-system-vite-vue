@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { defineConfig } from 'vite'
 import path from 'path'
 import tailwindcss from '@tailwindcss/vite'
@@ -9,12 +10,15 @@ export default defineConfig({
   plugins: [
     tailwindcss(),
     vue(),
-    vueDevTools(),
+    // vueDevTools()
   ],
   resolve: {
     alias: {
-      '@src': path.resolve(__dirname, './src'),
+      '@src': path.resolve(__dirname, './src')
     },
     extensions: ['.js', '.ts', '.json']
+  },
+  test: {
+    environment: 'happy-dom'
   }
 })
