@@ -1,32 +1,31 @@
-import { ErrorCode } from '@src/types/page'
 import { ref, Ref } from 'vue'
 
 export const usePage = () => {
-    const errorCode: Ref<ErrorCode> = ref(0)
-    const isError = ref(false)
-    const isLoading = ref(false)
+    const isPageError = ref(false)
+    const isPageLoading = ref(false)
+    const pageErrorCode: Ref<number> = ref(0)
 
-    async function pageIsError(code: ErrorCode): Promise<void> {
-        isError.value = true
-        errorCode.value = code
+    async function pageIsError(code: number): Promise<void> {
+        isPageError.value = true
+        pageErrorCode.value = code
 
         return Promise.resolve()
     }
     function pageLoading(value: boolean): void {
-        isLoading.value = value
+        isPageLoading.value = value
 
         if (value) {
-            isError.value = false
-            errorCode.value = 0
+            isPageError.value = false
+            pageErrorCode.value = 0
         }
     }
 
     return {
-        errorCode,
-        isError,
-        isLoading,
+        isPageError,
+        isPageLoading,
+        pageErrorCode,
 
         pageIsError,
-        pageLoading,
+        pageLoading
     }
 }
