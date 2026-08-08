@@ -1,22 +1,20 @@
-import store from '@src/stores'
+import store from '@/stores'
 import { createRouter, createWebHistory } from 'vue-router'
 import routes from './routes'
-import { Role } from '@src/types/user'
 
 const router = createRouter({
     history: createWebHistory(),
-    routes,
+    routes
 })
 
 /**
  * Navigation guard
  */
-router.beforeEach((to, from) => {
+router.beforeEach(function (to, from) {
     const isAuthenticated: boolean = store.getters['auth/authenticated']
-    const isLoggedOut: boolean = store.getters['auth/loggedOut']
-    const userRole: Role = store.getters['auth/profile']?.role ?? 'user'
+    const isLoggedOut: boolean = store.getters['auth/logged_out']
 
-    // Initial visit
+    // Initial visits
     if (!from.name) {
         return true
     }
@@ -28,7 +26,7 @@ router.beforeEach((to, from) => {
         }
 
         return {
-            name: 'login',
+            name: 'login'
         }
     }
 
@@ -40,21 +38,14 @@ router.beforeEach((to, from) => {
         }
 
         return {
-            name: `${userRole}.dashboard`,
-        }
-    }
-
-    // Role mismatch
-    if (isAuthenticated && (to.meta.role && to.meta.role !== userRole)) {
-        return {
-            name: `${userRole}.dashboard`,
+            name: 'user.dashboard'
         }
     }
 
     return true
 })
 
-router.afterEach((to, from, failure): void => {
+router.afterEach(function (to, from, failure): void {
     if (failure) {
         console.warn('Navigation error:', failure)
     }
