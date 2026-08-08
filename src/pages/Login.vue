@@ -1,51 +1,58 @@
 <script setup lang="ts">
-import Button from '@src/components/ui/Button.vue'
-import FormError from '@src/components/form/FormError.vue'
-import FormInputError from '@src/components/form/FormInputError.vue'
-import FormInputText from '@src/components/form/FormInputText.vue'
-import FormLabel from '@src/components/form/FormLabel.vue'
+import Button from '@/components/ui/Button.vue'
+import FormError from '@/components/form/FormError.vue'
+import FormInputError from '@/components/form/FormInputError.vue'
+import FormInputText from '@/components/form/FormInputText.vue'
+import FormLabel from '@/components/form/FormLabel.vue'
 import { useStore } from 'vuex'
 import { useRouter } from 'vue-router'
 import { ref } from 'vue'
+import { isAxiosError } from 'axios'
+import { LoginFormInputs } from '@/types/auth'
 const store = useStore()
 const router = useRouter()
 
-const errors = ref<{
-    form?: string,
-    email?: string,
-    password?: string
-}>({})
-const email = ref('')
-const password = ref('')
+const errors = ref<Partial<Record<LoginFormInputs, string>>>({})
+const inputEmail = ref('')
+const inputPassword = ref('')
 const isLoading = ref(false)
 
-async function handleSubmitError(err: any): Promise<void> {
-    console.error('Error during login:', err)
+function handleSubmitError(err: unknown): void {
+    if (isAxiosError(err) && err.response?.status === 422) {
+        const apiErrors = err.response.data?.errors as Record<string, string[]> | null
 
-    if (err.response?.status === 422) {
-        const apiErrors = err.response.data?.errors ?? {}
+        if (apiErrors) {
+            Object.entries(apiErrors).forEach(([key, value]) => {
+                if (key === 'email' || key === 'password') {
+                    errors.value[key] = value[0]
+                }
+            })
 
-        Object.entries(apiErrors).forEach(([key, value]) => {
-            errors.value[key] = value[0]
-        })
-
-        return
+            return
+        }
     }
 
     errors.value.form = 'Something went wrong, please try again'
 }
 async function handleSubmit(): Promise<void> {
+    if (isLoading.value) {
+        return
+    }
+
     isLoading.value = true
     errors.value = {}
 
-    try {
-        const { role } = await store.dispatch('auth/login', { email: email.value, password: password.value })
+    const inputs = {
+        email: inputEmail.value,
+        password: inputPassword.value
+    }
 
-        await router.replace({
-            name: `${role}.dashboard`,
-        })
-    } catch (err) {
-        await handleSubmitError(err)
+    try {
+        await store.dispatch('auth/login', inputs)
+
+        await router.replace({ name: 'user.dashboard' })
+    } catch (err: unknown) {
+        handleSubmitError(err)
     } finally {
         isLoading.value = false
     }
@@ -55,32 +62,33 @@ async function handleSubmit(): Promise<void> {
 <template>
     <div
         class="min-h-screen w-full
-        sm:bg-stone-300/60 sm:flex sm:items-center sm:justify-center"
+        sm:bg-stone-300/40 sm:flex sm:items-center sm:justify-center"
     >
         <form
             @submit.prevent="handleSubmit"
             class="bg-white flex flex-col gap-3 px-3 py-6 w-full
-            sm:border sm:border-stone-300 sm:max-w-lg sm:p-9 sm:rounded-3xl sm:shadow-lg sm:shadow-stone-600/30"
+            sm:border sm:border-stone-300 sm:max-w-lg sm:p-9 sm:rounded-3xl sm:shadow-lg sm:shadow-stone-600/40"
         >
             <h1 class="font-bold text-3xl">Log in</h1>
 
-            <FormError v-if="errors.form" :msg="errors.form" />
+            <FormError v-if="errors.form" :message="errors.form" />
 
             <div>
                 <FormLabel for="email" text="Email" class="mb-1.5" />
 
                 <div class="flex flex-col gap-1.5">
                     <FormInputText
-                        v-model="email"
+                        v-model="inputEmail"
                         id="email"
                         type="email"
                         :disabled="isLoading"
                         :error-message="errors.email"
                         :maxLength="255"
                         required
+                        test-id="email"
                     />
 
-                    <FormInputError v-if="errors.email" :msg="errors.email" />
+                    <FormInputError v-if="errors.email" :message="errors.email" />
                 </div>
             </div>
 
@@ -89,7 +97,7 @@ async function handleSubmit(): Promise<void> {
 
                 <div class="flex flex-col gap-1.5">
                     <FormInputText
-                        v-model="password"
+                        v-model="inputPassword"
                         id="password"
                         type="password"
                         :disabled="isLoading"
@@ -97,9 +105,10 @@ async function handleSubmit(): Promise<void> {
                         :maxLength="255"
                         :minLength="8"
                         required
+                        test-id="password"
                     />
 
-                    <FormInputError v-if="errors.password" :msg="errors.password" />
+                    <FormInputError v-if="errors.password" :message="errors.password" />
                 </div>
             </div>
 
@@ -107,7 +116,8 @@ async function handleSubmit(): Promise<void> {
                 :disabled="isLoading"
                 level="primary"
                 type="submit"
-                class="font-semibold"
+                class="font-semibold!"
+                test-id="submit"
             >Log in</Button>
         </form>
     </div>
