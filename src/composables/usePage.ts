@@ -1,17 +1,15 @@
-import { ref, Ref } from 'vue'
+import { ref } from 'vue'
 
 export const usePage = () => {
     const isPageError = ref(false)
     const isPageLoading = ref(false)
-    const pageErrorCode: Ref<number> = ref(0)
+    const pageErrorCode = ref(0)
 
-    async function pageIsError(code: number): Promise<void> {
+    function pageIsError(code: number = 0): void {
         isPageError.value = true
         pageErrorCode.value = code
-
-        return Promise.resolve()
     }
-    function pageLoading(value: boolean): void {
+    function pageLoading(value: boolean = true): void {
         isPageLoading.value = value
 
         if (value) {
