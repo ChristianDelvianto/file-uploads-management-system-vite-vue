@@ -1,37 +1,45 @@
 <script setup lang="ts">
-import IconMDIAccessTime from '@src/components/svg/mdi/AccessTime.vue'
-import IconMDIBinOutline from '@src/components/svg/mdi/BinOutline.vue'
-import IconMDIFileEditOutline from '@src/components/svg/mdi/FileEditOutline.vue'
-import IconMDIFileRestoreOutline from '@src/components/svg/mdi/FileRestoreOutline.vue'
-import IconMDIInformationOutline from '@src/components/svg/mdi/InformationOutline.vue'
-import IconMDILockOutline from '@src/components/svg/mdi/LockOutline.vue'
-import IconMDIShareVariantOutline from '@src/components/svg/mdi/ShareVariantOutline.vue'
-import IconMDITrayDownload from '@src/components/svg/mdi/TrayDownload.vue'
-import { FileDB, ViewMode } from '@src/stores/modules/file/types'
-import { downloadFile } from '@src/utils/file'
-import { useStore } from 'vuex'
-import { ComputedRef, inject } from 'vue'
-const store = useStore()
+import Button from '@/components/ui/Button.vue'
+import IconMDIBinOutline from '@/components/svg/mdi/BinOutline.vue'
+import IconMDIFileEditOutline from '@/components/svg/mdi/FileEditOutline.vue'
+import IconMDIFileRestoreOutline from '@/components/svg/mdi/FileRestoreOutline.vue'
+import IconMDIInformationOutline from '@/components/svg/mdi/InformationOutline.vue'
+import IconMDILockOutline from '@/components/svg/mdi/LockOutline.vue'
+import IconMDIShareVariantOutline from '@/components/svg/mdi/ShareVariantOutline.vue'
+import IconMDITrayDownload from '@/components/svg/mdi/TrayDownload.vue'
+import { useAuth } from '@/composables/useAuth'
+import { useFileCard } from '@/composables/useFileCard'
+import { requestDownloadLink } from '@/services/file.service'
+import { FileDB, FileViewMode } from '@/types/file'
+import { downloadContent } from '@/utils/file'
+import { computed, ComputedRef, inject, ref, type ToRef } from 'vue'
+const { profile } = useAuth()
 
 defineEmits<{
     (eventName: 'close'): void,
-    (eventName: 'open-modal', modalName: string): void,
+    (eventName: 'open-modal', modalName: string): void
 }>()
 
-const file = inject<Readonly<FileDB>>('file')
-const viewMode = inject<ComputedRef<Readonly<ViewMode>>>('viewMode')
+const file = inject<Readonly<ToRef<FileDB | null>>>('file', ref(null))
+const viewMode = inject<Readonly<ComputedRef<FileViewMode>>>('viewMode')
+
+const isOwner = computed(() => {
+    return profile.value?.id === file.value?.user?.id
+})
+
+const { fileIcon, fileName } = useFileCard(file)
 
 async function download(): Promise<void> {
-    if (!file) {
+    if (!file.value) {
         return
     }
 
     try {
-        const url = await store.dispatch('file/getDownloadLink', file.uuid)
+        const { url } = await requestDownloadLink(file.value.uuid)
 
-        downloadFile(url, file.name)
-    } catch (err) {
-        console.warn('Error while attempting to download')
+        downloadContent(url, fileName.value)
+    } catch (err: unknown) {
+        window.alert('Error while attempting to download')
     }
 }
 </script>
@@ -39,134 +47,131 @@ async function download(): Promise<void> {
 <template>
     <div
         :class="{
-            'md:right-8 md:-top-2': viewMode === 'grid',
-            'md:right-6 md:-top-3': viewMode === 'list',
+            'md:right-8': viewMode === 'grid',
+            'md:right-6': viewMode === 'list'
         }"
         class="bg-black/80 fixed flex inset-0 items-end p-3 w-full z-[2]
-        md:absolute md:bg-transparent md:inset-auto md:w-72"
+        md:absolute md:bg-transparent md:inset-auto md:-top-3 md:w-72"
     >
-        <!-- Click to close -->
-        <button
-            @click="$emit('close')"
-            type="button"
-            class="absolute bg-transparent inset-0 z-1
-            md:hidden"
-            title="View this file"
-        >
-            <span class="hidden">Close</span>
-        </button>
-
         <div
             class="bg-white flex flex-col pb-3 rounded-xl w-full z-[2]
-            md:border md:border-stone-300 md:overflow-hidden md:pb-0 md:shadow-md md:shadow-stone-300/60"
+            md:border md:border-stone-300/30 md:overflow-hidden md:pb-0 md:rounded-xl md:shadow-md md:shadow-stone-300/60"
         >
             <div
-                class="flex flex-row items-center justify-end px-3
+                class="border-b border-stone-300/60 flex flex-row gap-3 items-center overflow-ellipsis overflow-hidden p-3 w-full
                 md:hidden"
             >
-                <!--  -->
+                <span class="flex flex-grow-0 flex-shrink-0 items-center justify-center size-8">
+                    <component
+                        color="#155DFC"
+                        :is="fileIcon"
+                        :size="24"
+                    />
+                </span>
+
+                <div
+                    v-text="fileName"
+                    class="font-semibold overflow-ellipsis overflow-hidden text-lg whitespace-nowrap"
+                ></div>
             </div>
 
-            <div class="flex flex-col p-3">
+            <div
+                class="flex flex-col pb-1.5 px-1.5
+                md:pt-1.5"
+            >
                 <button
-                    @click="{}"
+                    @click="$emit('open-modal', 'detail')"
                     type="button"
-                    class="flex flex-grow flex-shrink gap-4 items-center p-2 rounded-xl text-lg
-                    hover:bg-stone-300/30"
+                    class="flex flex-grow flex-shrink gap-3 items-center p-2 rounded-lg text-lg
+                    hover:bg-stone-300/60"
                 >
-                    <IconMDIInformationOutline />
+                    <IconMDIInformationOutline color="#000" />
 
-                    Detail
+                    Details
                 </button>
 
-                <template v-if="file.deleted_at">
+                <!-- Menu when file trashed -->
+                <template v-if="file?.deleted_at">
                     <button
-                        @click="{}"
+                        @click="$emit('open-modal', 'trash')"
                         type="button"
-                        class="flex flex-grow flex-shrink gap-4 items-center p-2 rounded-xl text-lg
-                        hover:bg-stone-300/30"
+                        class="flex flex-grow flex-shrink gap-3 items-center p-2 rounded-lg text-lg
+                        hover:bg-stone-300/60"
                     >
-                        <IconMDIBinOutline />
+                        <IconMDIBinOutline color="#000" />
 
-                        Delete permanently
+                        Delete forever
                     </button>
 
                     <button
                         @click="$emit('open-modal', 'restore')"
                         type="button"
-                        class="flex flex-grow flex-shrink gap-4 items-center p-2 rounded-xl text-lg
-                        hover:bg-stone-300/30"
+                        class="flex flex-grow flex-shrink gap-3 items-center p-2 rounded-lg text-lg
+                        hover:bg-stone-300/60"
                     >
-                        <IconMDIFileRestoreOutline />
+                        <IconMDIFileRestoreOutline color="#000" />
 
                         Restore
                     </button>
                 </template>
                 <template v-else>
                     <button
-                        @click="{}"
+                        v-if="isOwner"
+                        @click="$emit('open-modal', 'visibility')"
                         type="button"
-                        class="flex flex-grow flex-shrink gap-4 items-center p-2 rounded-xl text-lg
-                        hover:bg-stone-300/30"
+                        class="flex flex-grow flex-shrink gap-3 items-center p-2 rounded-lg text-lg
+                        hover:bg-stone-300/60"
                     >
-                        <IconMDIAccessTime />
+                        <IconMDILockOutline color="#000" />
 
-                        View log
-                    </button>
-
-                    <button
-                        @click="{}"
-                        type="button"
-                        class="flex flex-grow flex-shrink gap-4 items-center p-2 rounded-xl text-lg
-                        hover:bg-stone-300/30"
-                    >
-                        <IconMDILockOutline />
-
-                        Manage access
+                        Manage visibility
                     </button>
 
                     <button
                         @click="download"
                         type="button"
-                        class="flex flex-grow flex-shrink gap-4 items-center p-2 rounded-xl text-lg
-                        hover:bg-stone-300/30"
+                        class="flex flex-grow flex-shrink gap-3 items-center p-2 rounded-lg text-lg
+                        hover:bg-stone-300/60"
                     >
-                        <IconMDITrayDownload />
+                        <IconMDITrayDownload color="#000" />
 
                         Download
                     </button>
 
                     <button
-                        @click="{}"
+                        v-if="isOwner"
+                        @click="$emit('open-modal', 'share')"
                         type="button"
-                        class="flex flex-grow flex-shrink gap-4 items-center p-2 rounded-xl text-lg
-                        hover:bg-stone-300/30"
+                        class="flex flex-grow flex-shrink gap-3 items-center p-2 rounded-lg text-lg
+                        hover:bg-stone-300/60"
                     >
-                        <IconMDIShareVariantOutline />
+                        <IconMDIShareVariantOutline color="#000" />
 
                         Share
                     </button>
 
                     <button
-                        @click="$emit('open-modal', 'delete')"
+                        v-if="isOwner"
+                        @click="$emit('open-modal', 'trash')"
                         type="button"
-                        class="flex flex-grow flex-shrink gap-4 items-center p-2 rounded-xl text-lg
-                        hover:bg-stone-300/30"
+                        class="flex flex-grow flex-shrink gap-3 items-center p-2 rounded-lg text-lg
+                        hover:bg-stone-300/60"
                     >
-                        <IconMDIBinOutline />
+                        <IconMDIBinOutline color="#000" />
 
-                        Delete
+                        Move to trash
                     </button>
 
                     <button
-                        @click="$emit('open-modal', 'edit')"
+                        v-if="isOwner"
+                        @click="$emit('open-modal', 'rename')"
                         type="button"
-                        class="flex flex-grow flex-shrink gap-4 items-center p-2 rounded-xl text-lg
-                        hover:bg-stone-300/30"
+                        class="flex flex-grow flex-shrink gap-3 items-center p-2 rounded-lg text-lg
+                        hover:bg-stone-300/60"
                     >
-                        <IconMDIFileEditOutline />
+                        <IconMDIFileEditOutline color="#000" />
 
-                        Edit
+                        Rename
                     </button>
                 </template>
             </div>
@@ -175,11 +180,10 @@ async function download(): Promise<void> {
                 class="px-3
                 md:hidden"
             >
-                <button
+                <Button
                     @click="$emit('close')"
-                    type="button"
-                    class="bg-gray-300/60 font-semibold py-1.5 rounded-full text-center text-lg w-full"
-                >Close</button>
+                    class="bg-stone-50 stone-300/60 font-semibold py-1.5 rounded-full! text-center text-lg w-full"
+                >Go back</Button>
             </div>
         </div>  
     </div>
