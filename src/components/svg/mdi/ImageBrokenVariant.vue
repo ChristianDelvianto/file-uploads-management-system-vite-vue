@@ -1,0 +1,23 @@
+<script setup lang="ts">
+withDefaults(defineProps<Readonly<{
+    color?: string,
+    size?: number,
+}>>(), {
+    color: '#4A5565', // text-gray-600
+    size: 24,
+})
+</script>
+
+<template>
+    <svg
+        :height="$props.size"
+        :width="$props.size"
+        viewBox="0 0 24 24"
+        xmlns="http://www.w3.org/2000/svg"
+    >
+        <path
+            :fill="$props.color"
+            d="M21 5v6.59l-3-3.01l-4 4.01l-4-4l-4 4l-3-3.01V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2m-3 6.42l3 3.01V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-6.58l3 2.99l4-4l4 4"
+        />
+    </svg>
+</template>
