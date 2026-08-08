@@ -1,98 +1,58 @@
+import UserLayout from '@/components/layout/user/UserLayout.vue'
+import UserHomePage from '@/pages/UserHome.vue'
+import UserSharedPage from '@/pages/UserShared.vue'
+import UserSettingsPage from '@/pages/UserSettings.vue'
+import UserTrashPage from '@/pages/UserTrash.vue'
 import type { RouteRecordRaw } from 'vue-router'
-import UserLayout from '@src/components/layout/UserLayout.vue'
-import UserHomePage from '@src/pages/UserHome.vue'
-import UserImagesPage from '@src/pages/UserImages.vue'
-import UserAudiosPage from '@src/pages/UserAudios.vue'
-import UserVideosPage from '@src/pages/UserVideos.vue'
-import UserDocumentsPage from '@src/pages/UserDocuments.vue'
-import UserOthersPage from '@src/pages/UserOthers.vue'
-import UserDeletedPage from '@src/pages/UserDeleted.vue'
-import UserLogsPage from '@src/pages/UserLogs.vue'
 
-const recent: RouteRecordRaw = {
+const home: RouteRecordRaw = {
     meta: {},
     path: 'home',
     name: 'user.home',
-    component: UserHomePage,
+    component: UserHomePage
 }
 
-const image: RouteRecordRaw = {
+const shared: RouteRecordRaw = {
     meta: {},
-    path: 'images',
-    name: 'user.images',
-    component: UserImagesPage,
+    path: 'shared',
+    name: 'user.shared',
+    component: UserSharedPage
 }
 
-const audio: RouteRecordRaw = {
+const trash: RouteRecordRaw = {
     meta: {},
-    path: 'audios',
-    name: 'user.audios',
-    component: UserAudiosPage,
+    path: 'trash',
+    name: 'user.trash',
+    component: UserTrashPage
 }
 
-const video: RouteRecordRaw = {
+const settings: RouteRecordRaw = {
     meta: {},
-    path: 'videos',
-    name: 'user.videos',
-    component: UserVideosPage,
+    path: 'settings',
+    name: 'user.settings',
+    component: UserSettingsPage
 }
 
-const document: RouteRecordRaw = {
-    meta: {},
-    path: 'documents',
-    name: 'user.documents',
-    component: UserDocumentsPage,
-}
+export default [
+    {
+        meta: {
+            guestOnly: false,
+            userOnly: true,
+            role: 'user'
+        },
+        path: '/user',
+        name: 'user.dashboard',
+        component: UserLayout,
+        redirect: {
+            name: 'user.home'
+        },
+        children: [
+            home,
+            shared,
+            trash,
 
-const other: RouteRecordRaw = {
-    meta: {},
-    path: 'others',
-    name: 'user.others',
-    component: UserOthersPage,
-}
-
-const deleted: RouteRecordRaw = {
-    meta: {},
-    path: 'deleted',
-    name: 'user.deleted',
-    component: UserDeletedPage,
-}
-
-const logs: RouteRecordRaw = {
-    meta: {},
-    path: 'logs',
-    name: 'user.logs',
-    component: UserLogsPage,
-}
-
-const root: RouteRecordRaw = {
-    meta: {
-        guestOnly: false,
-        userOnly: true,
-        role: 'user',
-    },
-    path: '/user',
-    name: 'user.dashboard',
-    component: UserLayout,
-    redirect: {
-        name: 'user.home',
-    },
-    children: [
-        recent,
-        image,
-        audio,
-        video,
-        document,
-        other,
-        deleted,
-
-        // account
-        logs,
-    ]
-}
-
-const userRoutes: RouteRecordRaw[] = [
-    root,
+            // account
+            settings
+        ]
+    }
 ]
-
-export default userRoutes
