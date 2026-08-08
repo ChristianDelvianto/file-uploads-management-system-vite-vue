@@ -1,39 +1,28 @@
-<style scoped>
-@import 'tailwindcss';
-
-.thumbnail {
-    @apply flex flex-grow-0 flex-shrink-0 items-center justify-center overflow-hidden relative;
-}
-
-    .thumbnail::before {
-        @apply absolute bg-transparent block inset-0 z-0;
-
-        content: '';
-    }
-</style>
-
 <script setup lang="ts">
-import IconMDIDotsVertical from '@src/components/svg/mdi/DotsVertical.vue'
-import IconMDILockOutline from '@src/components/svg/mdi/LockOutline.vue'
-import IconMDIPublic from '@src/components/svg/mdi/Public.vue'
-import FileCardMenu from '@src/components/file/FileCardMenu.vue'
-import { useFileCard } from '@src/composables/useFileCard'
-import { FileDB, ViewMode } from '@src/stores/modules/file/types'
-import { computed, onBeforeUnmount, provide, ref } from 'vue'
+import IconMDIDotsVertical from '@/components/svg/mdi/DotsVertical.vue'
+import FileCardMenu from '@/components/file/FileCardMenu.vue'
+import FileCardOwner from '@/components/file/FileCardOwner.vue'
+import FileCardThumbnail from '@/components/file/FileCardThumbnail.vue'
+import FileCardVisibility from '@/components/file/FileCardVisibility.vue'
+import { useFileCard } from '@/composables/useFileCard'
+import { FileDB, FileViewMode } from '@/types/file'
+import { computed, provide, ref, toRef } from 'vue'
 
 const emit = defineEmits<{
-    (eventName: 'open-modal', modalName: string): void,
+    (eventName: 'open-modal', modalName: string): void
 }>()
 
 const props = withDefaults(defineProps<Readonly<{
     file: FileDB,
-    viewMode: ViewMode,
+    showOwner?: boolean,
+    viewMode: FileViewMode
 }>>(), {
-    viewMode: 'grid',
+    showOwner: false,
+    viewMode: 'grid'
 })
 
-const imageElement = ref()
-const imageLoaded = ref(false)
+const fileRef = toRef(() => props.file)
+
 const isMenuOpen = ref(false)
 
 const {
@@ -41,111 +30,68 @@ const {
     fileName,
     fileSize,
     imageURL,
-    showImage,
-} = useFileCard(props.file)
+    owner,
+    shared,
+    showImage
+} = useFileCard(fileRef)
 
-provide('file', props.file)
-provide('viewMode', computed(() => props.viewMode)) // Has to be 'computed', otherwise, it's not reactive
+provide('file', fileRef)
+provide('viewMode', computed<FileViewMode>(() => props.viewMode))
 
-function loadImage(event: Event): void {
-    const image = (event.target as HTMLImageElement)
-
-    if (image.complete) {
-        imageLoaded.value = true
-    }
-}
 function openModal(modalName: string): void {
     isMenuOpen.value = false
 
-    emit('open-modal', modalName)
-}
-function removeImageSrc(): void {
-    if (showImage.value) {
-        imageElement.value?.removeAttribute('src')
-    }
-}
+    if (fileRef.value?.deleted_at) {
+        emit('open-modal', 'restore') // For trash page
 
-onBeforeUnmount((): void => {
-    // Cancel image loading when component is unmounted,
-    // Saves memory and prevents unnecessary work by browser
-    removeImageSrc()
-})
+        return
+    }
+
+    emit('open-modal', modalName) // Normal usage
+}
 </script>
 
 <template>
     <div
         :class="{
-            'border border-stone-600/30 flex-col-reverse rounded-xl shadow-lg shadow-stone-600/30': viewMode === 'grid',
-            'flex-row gap-3 items-center p-3 md:rounded-xl md:shadow-lg md:shadow-stone-600/15': viewMode === 'list',
+            'bg-[rgb(234,250,234)] flex-col-reverse rounded-xl': $props.viewMode === 'grid',
+            'flex-row gap-3 items-center px-3 py-3 md:px-0 md:rounded-xl lg:bg-[rgb(234,250,234)] lg:px-3': $props.viewMode === 'list'
         }"
-        class="bg-white flex flex-grow-0 flex-shrink relative w-full"
+        class="duration-300 ease-in-out flex flex-grow-0 flex-shrink relative transition-colors w-full"
     >
-        <!-- Button to covering entire element, easy for user to click - to open file viewer -->
+        <!-- Overlay Button covering entire element, easy for user to click -->
         <button
+            v-if="$props.file"
             @click="openModal('view')"
-            :data-testid="`view-button-${file.uuid}`"
+            :data-testid="`view_button_${$props.file.uuid}`"
             type="button"
-            class="absolute bg-transparent inset-0 z-1"
+            class="absolute bg-transparent inset-0 text-[0px] z-1"
             title="View file"
-        >
-            <span class="hidden">View file</span>
-        </button>
+        >View file</button>
+
+        <FileCardThumbnail
+            :file-icon="fileIcon"
+            :file-name="fileName"
+            :imageURL="imageURL"
+            :show-image="showImage"
+            :view-mode="$props.viewMode"
+        />
 
         <div
             :class="{
-                'rounded-b-lg pb-[75%] w-full': viewMode === 'grid',
-                'rounded-lg size-12': viewMode === 'list',
-                'animate-pulse bg-gray-300': showImage && !imageLoaded,
-            }"
-            class="thumbnail"
-        >
-            <img
-                v-if="showImage"
-                @load="loadImage"
-                ref="imageElement"
-                :src="imageURL"
-                alt=""
-                draggable="false"
-                class="absolute object-cover inset-0 select-none size-full"
-            />
-            <div
-                v-else
-                class="absolute bg-gray-300/60 flex flex-grow-0 flex-shrink-0 inset-0 items-center justify-center"
-            >
-                <component
-                    color="#155DFC"
-                    :is="fileIcon"
-                    :size="viewMode === 'grid' ? 64 : 32"
-                    class="absolute"
-                />
-            </div>
-
-            <span
-                v-if="file.visibility === 'public' && viewMode === 'grid'"
-                class="absolute bg-gray-600/30 bottom-1.5 flex flex-grow-0 flex-shrink items-center justify-center right-1.5 rounded-full size-9"
-            >
-                <IconMDIPublic
-                    color="#FFF"
-                    :size="20"
-                />
-            </span>
-        </div>
-
-        <div
-            :class="{
-                'border-b border-stone-300 max-w-full': viewMode === 'grid',
-                'max-w-[calc(100%-3.75rem)]': viewMode === 'list',
+                'rounded-t-[inherit] max-w-full': $props.viewMode === 'grid',
+                'max-w-[calc(100%-3.75rem)]': $props.viewMode === 'list'
             }"
             class="flex flex-grow flex-shrink items-center overflow-ellipsis w-full"
         >
             <div
                 :class="{
-                    'gap-1.5 items-center pl-3 py-2': viewMode === 'grid',
+                    'gap-1.5 items-center pl-3 py-2': $props.viewMode === 'grid'
                 }"
                 class="flex flex-grow flex-shrink overflow-ellipsis overflow-hidden w-full"
             >
-                <component
-                    v-if="viewMode === 'grid'"
+                <component 
+                    v-if="$props.viewMode === 'grid'"
                     :is="fileIcon"
                     color="#155DFC"
                     class="flex-grow-0 flex-shrink-0"
@@ -153,43 +99,47 @@ onBeforeUnmount((): void => {
 
                 <div
                     :class="{
-                        'flex flex-grow flex-col gap-0.5 lg:flex-row lg:gap-0 lg:items-center': viewMode === 'list',
+                        'flex flex-grow flex-col gap-0.5 lg:flex-row lg:gap-0 lg:items-center': $props.viewMode === 'list'
                     }"
                     class="overflow-ellipsis overflow-hidden"
                 >
                     <div
                         v-text="fileName"
                         :class="{
-                            'font-semibold lg:flex-grow-0 lg:flex-shrink-0 lg:max-w-3/5': viewMode === 'list',
+                            'lg:max-w-[calc(50%-3.5rem)]': ($props.viewMode === 'list' && $props.showOwner),
+                            'lg:max-w-[calc(60%-3rem)]': ($props.viewMode === 'list' && !$props.showOwner),
+                            'font-semibold lg:flex-grow-0 lg:flex-shrink-0 lg:pr-3': $props.viewMode === 'list'
                         }"
                         class="leading-snug overflow-ellipsis overflow-hidden whitespace-nowrap w-full"
                     ></div>
 
                     <div
-                        v-if="viewMode === 'list'"
+                        v-if="$props.viewMode === 'list'"
+                        :class="{
+                            'lg:pr-4': $props.showOwner
+                        }"
                         class="flex flex-grow flex-row items-center"
                     >
-                        <div
-                            class="flex flex-grow-0 flex-row flex-shrink gap-1.5 items-center
-                            lg:w-1/2"
-                        >
-                            <template v-if="file.visibility === 'private'">
-                                <IconMDILockOutline :size="18" />
+                        <FileCardOwner
+                            v-if="$props.showOwner"
+                            :owner="owner"
+                        />
 
-                                Private
-                            </template>
-                            <template v-else-if="file.visibility === 'public'">
-                                <IconMDIPublic :size="18" />
-
-                                Public
-                            </template>
-
-                            <!-- Shared -->
-                        </div>
+                        <FileCardVisibility
+                            :shared="shared"
+                            :class="{
+                                'lg:w-1/3': $props.showOwner,
+                                'lg:w-1/2': !$props.showOwner
+                            }"
+                        />
 
                         <div
-                            class="
-                            md:w-1/2"
+                            :class="{
+                                'lg:w-1/3': $props.showOwner,
+                                'lg:w-1/2': !$props.showOwner
+                            }"
+                            class="text-gray-600
+                            lg:text-black"
                         >
                             {{ fileSize }}
                         </div>
@@ -199,18 +149,18 @@ onBeforeUnmount((): void => {
 
             <div
                 :class="{
-                    'pr-1.5': viewMode === 'grid',
+                    'md:pr-1.5': $props.viewMode === 'grid'
                 }"
                 class="flex-grow-0 flex-shrink-0 relative"
             >
                 <button
-                    @click="isMenuOpen = !isMenuOpen"
+                    @click.stop="isMenuOpen = !isMenuOpen"
                     type="button"
                     class="flex flex-grow-0 flex-shrink-0 items-center justify-center relative rounded-full size-9 z-1
                     focus:bg-stone-300
                     hover:bg-stone-300"
                 >
-                    <IconMDIDotsVertical :size="20" />
+                    <IconMDIDotsVertical color="#000" :size="20" />
                 </button>
 
                 <FileCardMenu
