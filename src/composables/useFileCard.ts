@@ -1,57 +1,57 @@
-import IconMDIDocument from '@src/components/svg/mdi/Document.vue'
-import IconMDIImage from '@src/components/svg/mdi/Image.vue'
-import IconMDIFile from '@src/components/svg/mdi/File.vue'
-import IconMDIMusic from '@src/components/svg/mdi/Music.vue'
-import IconMDIVideo from '@src/components/svg/mdi/Video.vue'
-import { FileDB } from '@src/stores/modules/file/types'
-import { type Component, computed } from 'vue'
+import IconMDIDocument from '@/components/svg/mdi/Document.vue'
+import IconMDIImage from '@/components/svg/mdi/Image.vue'
+import IconMDIFile from '@/components/svg/mdi/File.vue'
+import IconMDIMusic from '@/components/svg/mdi/Music.vue'
+import IconMDIVideo from '@/components/svg/mdi/Video.vue'
+import { FileDB, Shared } from '@/types/file'
+import { User } from '@/types/user'
+import { formatBytesSize } from '@/utils/string'
+import { type Component, computed, Ref } from 'vue'
 
-export const useFileCard = (item: FileDB) => {
+export const useFileCard = (item: Ref<FileDB | null>) => {
     const fileIcon = computed<Component>(() => {
-        if (item.category === 'audio') {
-            return IconMDIMusic
-        }
-
-        if (item.category === 'document') {
-            return IconMDIDocument
-        }
-
-        if (item.category === 'image') {
-            return IconMDIImage
-        }
-
-        if (item.category === 'video') {
-            return IconMDIVideo
-        }
-
-        return IconMDIFile
-    })
-    const fileName = computed(() => {
-        if (item.name && item.extension) {
-            return `${item.name}.${item.extension}`
-        }
+        if (!item.value) return IconMDIFile
         
-        return 'Null'
-    })
-    const fileSize = computed(() => {
-        // GB
-        if (item.bytes_size >= 1073_741_824) {
-            return `${(item.bytes_size / 1_073_741_824).toFixed(2)} GB`
+        switch (item.value.category) {
+            case 'audio':
+                return IconMDIMusic
+            case 'document':
+                return IconMDIDocument
+            case 'image':
+                return IconMDIImage
+            case 'video':
+                return IconMDIVideo
+            default:
+                return IconMDIFile
         }
-
-        // MB
-        if (item.bytes_size >= 1_048_576) {
-            return `${(item.bytes_size / 1_048_576).toFixed(0)} MB`
-        }
-
-        // KB
-        return `${(item.bytes_size / 1_024).toFixed(0)} KB`
     })
-    const imageURL = computed(() => {
-        return item.thumbnail_url ?? item.storage_url
+    const fileName = computed<string>(() => {
+        if (!item.value || !item.value.name || !item.value.extension) return 'null'
+
+        return `${item.value.name}.${item.value.extension}`
     })
-    const showImage = computed(() => {
-        return (item.thumbnail_url || item.category === 'image')
+    const fileSize = computed<string>(() => {
+        if (!item.value) return '0 B'
+        
+        return formatBytesSize(item.value.bytes_size, 2)
+    })
+    const imageURL = computed<string | null>(() => {
+        if (!item.value) return null
+
+        return item.value.thumbnail_url || item.value.storage_url
+    })
+    const owner  = computed<User | null>(() => {
+        if (!item.value || !item.value.user) return null
+
+        return item.value.user
+    })
+    const shared = computed<Shared[]>(() => {
+        if (!item.value || item.value.visibility === 'private' || item.value.visibility === 'public') return []
+
+        return item.value.shared || []
+    })
+    const showImage = computed<boolean>(() => {
+        return !!item.value?.thumbnail_url || !!item.value?.storage_url
     })
 
     return {
@@ -59,6 +59,8 @@ export const useFileCard = (item: FileDB) => {
         fileName,
         fileSize,
         imageURL,
-        showImage,
+        owner,
+        shared,
+        showImage
     }
 }
