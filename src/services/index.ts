@@ -1,13 +1,14 @@
+import { TOKEN_KEY } from '@/const/localStorage'
 import axios, { AxiosError } from 'axios'
 
 const Api = axios.create({
     // baseURL: '', // Base URL already defined from src/main.ts
     headers: {
         'Accept': 'application/json',
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json'
     },
     withCredentials: false,
-    withXSRFToken: false,
+    withXSRFToken: false
 })
 
 /**
@@ -15,7 +16,7 @@ const Api = axios.create({
  */
 Api.interceptors.request.use(
     (req) => {
-        const token = localStorage.getItem('token')
+        const token = localStorage.getItem(TOKEN_KEY)
 
         if (token) {
             req.headers['Authorization'] = `Bearer ${token}`
@@ -33,9 +34,9 @@ Api.interceptors.request.use(
  */
 Api.interceptors.response.use(
     (res) => res,
-    async (originalErr: AxiosError): Promise<AxiosError> => {
-        // We are using Laravel Sanctum
-        // No need for refresh token logic
+    async (originalErr: AxiosError): Promise<never> => {
+        // No need for refresh token logic, we are using Laravel Sanctum
+        // (Unless we set token expiration from the backend)
         
         return Promise.reject(originalErr)
     }
