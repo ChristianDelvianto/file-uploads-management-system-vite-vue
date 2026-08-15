@@ -13,10 +13,10 @@ const props = withDefaults(defineProps<Readonly<{
 })
 
 const emit = defineEmits<{
-    (eventName: 'update:modelValue', value: string): void
+    (eventName: 'update:modelValue', value: string | number): void
 }>()
 
-const uppercasedOptions = computed(function () {
+const uppercasedOptions = computed<{ text: string, value: string }[]>(() => {
     // For array of objects, we will require different approach
     return props.options.map((option: string) => {
         const uppercasedOption = option[0].toUpperCase() + option.slice(1)
@@ -38,13 +38,13 @@ function handleChange(event: Event): void {
 <template>
     <select
         @change="handleChange"
-        :data-testid="testId"
-        :value="modelValue"
-        :name="name"
-        :disabled="disabled"
+        :data-testid="$props.testId"
+        :value="$props.modelValue"
+        :name="$props.name"
+        :disabled="$props.disabled"
         :class="{
-            'bg-red-100 border-red-600 focus:border-red-600 focus:outline-4 focus:outline-red-300': errorMessage,
-            'bg-white border-stone-300 focus:border-blue-600 focus:outline-4 focus:outline-blue-300': !errorMessage,
+            'bg-red-100 border-red-600 focus:border-red-600 focus:outline-4 focus:outline-red-300': $props.errorMessage,
+            'bg-white border-stone-300 focus:border-blue-600 focus:outline-4 focus:outline-blue-300': !$props.errorMessage
         }"
         class="border duration-300 ease-in-out overflow-hidden px-3 py-1.5 rounded-lg transition-all"
     >
@@ -52,7 +52,7 @@ function handleChange(event: Event): void {
             v-for="option in uppercasedOptions"
             :key="option.value"
             :value="option.value"
-            :selected="modelValue === option.value"
+            :selected="$props.modelValue === option.value"
             class="block text-center"
         >{{ option.text }}</option>
     </select>
