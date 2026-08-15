@@ -7,9 +7,9 @@ defineProps<Readonly<{
 
 <template>
     <label
-        :data-testid="testId"
+        :data-testid="$props.testId"
         class="block font-semibold text-gray-600"
     >
-        {{ text }}
+        {{ $props.text }}
     </label>
 </template>
