@@ -20,14 +20,14 @@ const model = defineModel({
 <template>
     <input
         v-model="model"
-        :data-testid="testId"
-        :type="type"
-        :id="id"
-        :disabled="disabled"
-        :placeholder="placeholder"
+        :data-testid="$props.testId"
+        :type="$props.type"
+        :id="$props.id"
+        :disabled="$props.disabled"
+        :placeholder="$props.placeholder"
         :class="{
-            'bg-red-100 border-red-600 focus:border-red-600 focus:outline-red-300': errorMessage,
-            'bg-white border-stone-300 focus:border-blue-600 focus:outline-blue-300': !errorMessage,
+            'bg-red-100 border-red-600 focus:border-red-600 focus:outline-red-300': $props.errorMessage,
+            'bg-white border-stone-300 focus:border-blue-600 focus:outline-blue-300': !$props.errorMessage
         }"
         class="border duration-300 ease-in-out px-3 py-1.5 rounded-lg transition-all
         focus:bg-white focus:outline-4"
