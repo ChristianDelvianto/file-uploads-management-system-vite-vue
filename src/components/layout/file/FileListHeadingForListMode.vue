@@ -7,13 +7,13 @@ withDefaults(defineProps<{
 </script>
 
 <template>
-    <div class="bg-white flex flex-grow flex-row flex-shrink items-center mx-6 pb-1.5 py-6 sticky top-14 z-[2]">
+    <div class="bg-white flex flex-grow flex-row flex-shrink items-center mx-6 pb-1.5 py-6 sticky top-14 z-2">
         <div
             :class="{
                 'max-w-[calc(50%-2.75rem)]': $props.showOwner,
                 'max-w-[calc(60%-3rem)]': !$props.showOwner
             }"
-            class="font-semibold pl-3 text-lg w-full"
+            class="font-semibold pl-3 w-full"
         >
             Name
         </div>
@@ -27,7 +27,7 @@ withDefaults(defineProps<{
         >
             <div
                 v-if="$props.showOwner"
-                class="flex-grow font-semibold hidden text-lg w-1/3
+                class="flex-grow font-semibold hidden w-1/3
                 lg:block"
             >
                 Owner
@@ -38,7 +38,7 @@ withDefaults(defineProps<{
                     'w-1/3': $props.showOwner,
                     'w-1/2': !$props.showOwner
                 }"
-                class="flex-grow font-semibold text-lg"
+                class="flex-grow font-semibold"
             >
                 Visibility
             </div>
@@ -48,7 +48,7 @@ withDefaults(defineProps<{
                     'w-1/3': $props.showOwner,
                     'w-1/2': !$props.showOwner
                 }"
-                class="flex-grow font-semibold text-lg"
+                class="flex-grow font-semibold"
             >
                 File size
             </div>
