@@ -2,7 +2,6 @@
 import PageError from './components/page/PageError.vue'
 import PageLoading from './components/page/PageLoading.vue'
 import { usePage } from './composables/usePage'
-import { hasToken } from './utils/localStorage'
 import { useStore } from 'vuex'
 import { useRoute, useRouter } from 'vue-router'
 import { onBeforeMount } from 'vue'
@@ -12,14 +11,14 @@ const route = useRoute()
 const router = useRouter()
 const { isPageError, isPageLoading, pageErrorCode, pageIsError, pageLoading } = usePage()
 
-async function handleCheckAuthError(err: unknown): Promise<void> {
+async function handleStartAppError(err: unknown): Promise<void> {
   pageErrorCode.value = 0
 
   if (isAxiosError(err) && err.response?.status) {
     if (err.response.status === 401) {
       // Guest currently in userOnly route, redirect to login page
       if (route.meta.userOnly) {
-        await router.push('/login')
+        await router.push({ name: 'login' })
       }
 
       // Otherwise, let guest stays in current route
@@ -31,30 +30,26 @@ async function handleCheckAuthError(err: unknown): Promise<void> {
 
   pageIsError(pageErrorCode.value)
 }
-async function checkAuth(): Promise<void> {
+async function startApp(): Promise<void> {
   pageLoading(true)
 
   try {
-    // No token
-    if (!hasToken()) {
-      // Guest in userOnly route, redirect to login page
-      if (route.meta.userOnly) {
-        await router.push('/login')
-      }
+    if (navigator.cookieEnabled === false) {
+      pageErrorCode.value = 2
+      pageIsError(pageErrorCode.value)
 
-      // End, switch to RouterView
       return
     }
 
-    // Token exists in localStorage
     await store.dispatch('auth/check')
 
-    // Token valid, and user currently in guestOnly route, replace route with user dashboard route
     if (route.meta.guestOnly) {
       await router.replace({ name: 'user.dashboard' })
     }
   } catch (err: unknown) {
-    await handleCheckAuthError(err)
+    console.error('Error startApp: ', err)
+
+    await handleStartAppError(err)
   } finally {
     pageLoading(false)
   }
@@ -62,11 +57,10 @@ async function checkAuth(): Promise<void> {
 
 /**
  * Why onBeforeMount, not onMounted?
- * 
  * Because we want to check authentication before the page is mounted and also to avoid flashing the page content.
  */
 onBeforeMount((): void => {
-  checkAuth()
+  startApp()
 })
 </script>
 
@@ -74,7 +68,7 @@ onBeforeMount((): void => {
   <PageLoading v-if="isPageLoading" class="min-h-screen" />
   <PageError
     v-else-if="isPageError"
-    @retry="checkAuth"
+    @retry="startApp"
     :error-code="pageErrorCode"
     class="min-h-screen"
   />
