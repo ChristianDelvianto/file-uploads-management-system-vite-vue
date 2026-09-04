@@ -41,7 +41,7 @@ provide('viewMode', computed<FileViewMode>(() => props.viewMode))
 function openModal(modalName: string): void {
     isMenuOpen.value = false
 
-    if (fileRef.value?.deleted_at) {
+    if (fileRef.value?.deleted_at && modalName === 'view') {
         emit('open-modal', 'restore') // For trash page
 
         return
