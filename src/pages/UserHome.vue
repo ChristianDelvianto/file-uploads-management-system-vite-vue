@@ -1,273 +1,361 @@
 <script setup lang="ts">
+import ImageErrorDefault from '@/assets/images/error-default.jpg'
+import IconMDIReload from '@/components/svg/mdi/Reload.vue'
+import FileCard from '@/components/file/FileCard.vue'
+import FileListEmpty from '@/components/layout/file/FileListEmpty.vue'
+import FileListHeadingForListMode from '@/components/layout/file/FileListHeadingForListMode.vue'
+import FileListViewMode from '@/components/layout/file/FileListViewMode.vue'
+import FormSelect from '@/components/form/FormSelect.vue'
+import ModalFileDetail from '@/components/modals/file/FileDetail.vue'
+import ModalFileRename from '@/components/modals/file/FileRename.vue'
+// import ModalFileShare from '@/components/modals/file/FileShare.vue'
+import ModalFileTrash from '@/components/modals/file/FileTrash.vue'
+import ModalFileViewer from '@/components/modals/file/FileViewer.vue'
+import ModalFileVisibility from '@/components/modals/file/FileVisibility.vue'
+import PageError from '@/components/page/PageError.vue'
+import PageLoading from '@/components/page/PageLoading.vue'
+import { useLoadMore } from '@/composables/useLoadMore'
+import { usePage } from '@/composables/usePage'
+import { useWindow } from '@/composables/useWindow'
+import { MIN_WIDTH_LG } from '@/const/window'
+import { getFiles } from '@/services/user.service'
+import { FileDB, FileStatus, FileViewMode } from '@/types/file'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { isAxiosError, isCancel } from 'axios'
 import InfiniteLoading from 'v3-infinite-loading/lib/v3-infinite-loading.es.js'
-import FileCard from '@src/components/file/FileCard.vue'
-import FileEditModal from '@src/components/file/modals/FileEdit.vue'
-import FileDeleteModal from '@src/components/file/modals/FileDelete.vue'
-import FileViewMode from '@src/components/layout/FileViewMode.vue'
-import FileViewerModal from '@src/components/file/modals/FileViewer.vue'
-import FormSelect from '@src/components/form/FormSelect.vue'
-import PageError from '@src/components/page/PageError.vue'
-import PageLoading from '@src/components/page/PageLoading.vue'
-import { usePage } from '@src/composables/usePage'
-import { useLoadMore } from '@src/composables/useLoadMore'
-import Api from '@src/services'
-import { FileDB, ViewMode } from '@src/stores/modules/file/types'
-import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { DateTime } from 'luxon'
-const { errorCode, isError, isLoading, pageIsError, pageLoading } = usePage()
-const { loadMoreErrorCode, loadMoreIsLoading, loadMoreError, loadMoreLoading } = useLoadMore()
+const { windowWidth } = useWindow()
+const { isPageError, isPageLoading, pageErrorCode, pageIsError, pageLoading } = usePage()
+const {
+    isLoadMoreCompleted,
+    isLoadMoreError,
+    isLoadMoreLoading,
+    loadMoreCompleted,
+    loadMoreError,
+    loadMoreErrorCode,
+    loadMoreLoading,
+    nextCursor,
+    $resetLoadMore
+} = useLoadMore()
+let abortController: AbortController | null = null
 
-const fileModal = reactive({
-    delete: false,
-    edit: false,
+const categoryBy = ref('all')
+const categoryOptions = ['all', 'audio', 'document', 'image', 'other', 'video']
+const fileModal = reactive<{ [modalName: string]: boolean }>({
+    detail: false,
+    rename: false,
+    share: false,
+    trash: false,
     view: false,
+    visibility: false
 })
 const fileModalUuid = ref('')
-const items = ref({})
-const loadCompleted = ref(false) // default; for infinite scroll
-const sortBy = ref('Newest')
-const viewMode = ref<ViewMode>('grid') // grid / list
+const fileViewMode = ref<FileViewMode>('grid')
+const items = ref<{ [uuid: string]: FileDB }>({})
+const sortBy = ref('newest')
+const sortOptions = ['newest', 'oldest']
 
 const fileForModal = computed<FileDB | null>(() => {
-    if (!fileModalUuid.value) {
-        return null
-    }
-
-    return items.value[fileModalUuid.value]
+    return items.value[fileModalUuid.value] || null
 })
-const itemsLength = computed(() => {
-    return Object.keys(items.value).length
-})
-const itemsKey = computed(() => {
+const itemsKey = computed<string[]>(() => {
     return Object.keys(items.value)
 })
-const modalOpened = computed(() => {
-    return Object.values(fileModal).some(value => value === true)
+const showFileListHeading = computed<boolean>(() => {
+    return fileViewMode.value === 'list' && windowWidth.value >= MIN_WIDTH_LG
 })
 
-function fileDeleted(uuid: string): void {
-    toggleModal(null)
-
+function fileNotFound(uuid: string): void {
     if (items.value[uuid]) {
-        delete items.value[uuid]
+        items.value[uuid].not_found = true
     }
 }
-function fileUpdated(item: FileDB): void {
-    // 
+function fileTrashed(uuid: string): void {
+    toggleModal()
+
+    delete items.value[uuid]
 }
-async function loadMore($state: any): Promise<void> {
-    if (loadMoreIsLoading.value) {
-        return
-    }
-
-    loadMoreLoading(true)
-
-    const lastItem = items.value[itemsKey.value[itemsKey.value.length - 1]]
-    const timestamp = DateTime.fromISO(lastItem.created_at).ts
-
-    try {
-        const res = await Api.get('/user/recent', {
-                        params: {
-                            oldest: sortBy.value === 'Oldest',
-                            timestamp,
-                        }
-                    })
-
-        if (res.data.files.length) {
-            res.data.files.forEach((item: FileDB) => {
-                items.value[item.uuid] = item
-            })
-
-            if (res.data.files.length < 20) {
-                $state.complete()
-
-                loadCompleted.value = true
-            } else {
-                $state.loaded()
-            }
-        } else {
-            $state.complete()
-
-            loadCompleted.value = true
-        }
-    } catch (err: any) {
-        console.error('Error when fetching more:', err)
-
-        const errCode = err?.response?.status ?? 0
-
-        await loadMoreError(errCode)
-
-        $state.error()
-    } finally {
-        loadMoreLoading(false)
+function fileUpdate(item: FileDB): void {
+    items.value[item.uuid] = item
+}
+function fileUpdateStatus(uuid: string, status: FileStatus): void {
+    if (items.value[uuid]) {
+        items.value[uuid].status = status
     }
 }
-async function getFiles(): Promise<void> {
+async function load(): Promise<void> {
     pageLoading(true)
 
+    abortController?.abort()
+    abortController = new AbortController()
+
+    $resetLoadMore()
     items.value = {}
-    loadCompleted.value = false
+
+    const params = {
+        category: categoryBy.value,
+        oldest: sortBy.value === 'oldest' ? 1 : 0
+    }
 
     try {
-        const res = await Api.get('/user/recent', {
-                        params: {
-                            oldest: sortBy.value === 'Oldest',
-                        }
-                    })
+        const { has_more, next_cursor, items } = await getFiles(params, abortController.signal)
 
-        if (res.data.files.length) {
-            res.data.files.forEach((item: FileDB) => {
-                items.value[item.uuid] = item
-            })
-
-            if (res.data.files.length < 20) {
-                loadCompleted.value = true
-            }
+        if (items.length !== 0) {
+            pushItems(items)
         }
-    } catch (err: any) {
-        console.error('Error when fetching files:', err)
 
-        const errCode = err?.response?.status ?? 0
+        if (has_more) {
+            nextCursor.value = next_cursor
+        } else {
+            loadMoreCompleted()
+        }
+    } catch (err: unknown) {
+        console.log('Error :', err)
+
+        if (isCancel(err)) {
+            return
+        }
+
+        let errCode = 0
+
+        if (isAxiosError(err) && err.response?.status) {
+            errCode = err.response.status
+        }
 
         pageIsError(errCode)
     } finally {
         pageLoading(false)
     }
 }
-function toggleModal(modalName: string | null, fileUuid: string = ''): void {
-    fileModalUuid.value = fileUuid
+async function loadMore($state: any): Promise<void> {
+    if (isLoadMoreCompleted.value || isLoadMoreLoading.value) {
+        return
+    }
 
-    // Reset all modal (Set all value to false)
+    loadMoreLoading(true)
+
+    abortController?.abort()
+    abortController = new AbortController()
+
+    const params = {
+        category: categoryBy.value,
+        oldest: sortBy.value === 'oldest' ? 1 : 0,
+        cursor: nextCursor.value
+    }
+
+    try {
+        const { has_more, next_cursor, items } = await getFiles(params, abortController.signal)
+
+        if (items.length !== 0) {
+            pushItems(items)
+        }
+
+        if (has_more) {
+            nextCursor.value = next_cursor
+            
+            $state.loaded()
+        } else {
+            $state.complete()
+
+            loadMoreCompleted()
+        }
+    } catch (err: unknown) {
+        console.log('Error :', err)
+
+        if (isCancel(err)) {
+            return
+        }
+
+        let errCode = 0
+
+        if (isAxiosError(err) && err.response?.status) {
+            errCode = err.response.status
+        }
+
+        // Store the error code first
+        loadMoreError(errCode)
+
+        $state.error()
+    } finally {
+        loadMoreLoading(false)
+    }
+}
+function pushItems(files: FileDB[]): void {
+    files.forEach((item: FileDB) => {
+        item.unauthorized = false
+        item.not_found = false
+        
+        items.value[item.uuid] = item
+    })
+}
+function toggleModal(modalName: string | null = null, uuid: string = ''): void {
+    // Close all previous modals
     Object.keys(fileModal).forEach((key: string) => {
         fileModal[key] = false
     })
 
-    // Then we will set the right one to true (if modalName != null)
+    // Close a modal and if file not found, remove from item
+    if (!modalName && items.value[fileModalUuid.value].not_found) {
+        delete items.value[fileModalUuid.value]
+    }
+
+    // Set new UUID for modal
+    fileModalUuid.value = uuid
+
+    // Open
     if (modalName) {
         fileModal[modalName] = true
     }
 }
 
-watch(sortBy, (): void => {
-    getFiles()
+watch([categoryBy, sortBy], (): void => {
+    load()
 })
 
 onMounted((): void => {
-    getFiles()
+    load()
+})
+onBeforeUnmount((): void => {
+    abortController?.abort()
 })
 </script>
 
 <template>
-    <PageLoading v-if="isLoading" class="min-h-[calc(100vh-4rem)]" />
-    <PageError
-        v-else-if="isError"
-        @retry="getFiles"
-        :error-code="errorCode"
+    <PageLoading
+        v-if="isPageLoading"
         class="min-h-[calc(100vh-4rem)]"
     />
-    <div v-else-if="itemsLength === 0">
-        You haven't uploaded anything yet.
-
-        <br />
-
-        <button
-            @click="getFiles"
-            type="button"
-            class="border border-stone-300 px-3 py-1.5 rounded-lg"
-        >Refresh</button>
-    </div>
+    <PageError
+        v-else-if="isPageError"
+        @retry="load"
+        :error-code="pageErrorCode"
+        :error-image="ImageErrorDefault"
+        class="min-h-[calc(100vh-4rem)]"
+    />
     <div v-else>
         <div
-            class="flex flex-row items-center justify-between mt-3 px-3
-            md:mt-6 md:px-6"
+            class="flex flex-row items-center justify-between mt-3 pl-3 pr-3
+            md:mt-6 md:pl-6 md:pr-4"
         >
-            <FormSelect
-                v-model="sortBy"
-                :options="['Newest', 'Oldest']"
-                class="border border-stone-300 font-semibold text-lg"
-            />
-            
-            <FileViewMode
-                @update:view-mode="(mode: ViewMode) => viewMode = mode"
-                :view-mode="viewMode"
-            />
-        </div>
+            <div class="flex flex-row flex-shrink-0 gap-3 items-center justify-start">
+                <!-- Sort by -->
+                <FormSelect
+                    v-model="sortBy"
+                    :options="sortOptions"
+                    class="border border-stone-600/30 font-semibold px-1! rounded-lg! text-[16px]
+                    sm:px-3!
+                    md:border-stone-600/60"
+                />
 
-        <div>
-            <div
-                :class="{
-                    'gap-3 grid grid-cols-2 p-3 md:gap-6 lg:grid-cols-4 2xl:grid-cols-8': viewMode === 'grid',
-                    'divide-y divide-stone-300 flex flex-col md:gap-3': viewMode === 'list',
-                }"
-                class="
-                md:p-6"
-            >
-                <FileCard
-                    v-for="uuid in itemsKey"
-                    @open:delete-modal="toggleModal('delete', uuid)"
-                    @open:edit-modal="toggleModal('edit', uuid)"
-                    @open:view-modal="toggleModal('view', uuid)"
-                    :file="items[uuid]"
-                    :key="uuid"
-                    :view-mode="viewMode"
+                <!-- Category -->
+                <FormSelect
+                    v-model="categoryBy"
+                    :options="categoryOptions"
+                    class="border border-stone-600/30 font-semibold px-0! rounded-lg! text-[16px]
+                    sm:px-1.5!
+                    md:border-stone-600/60"
                 />
             </div>
+            
+            <div class="flex flex-grow-0 flex-row flex-shrink-0 gap-1.5 items-center">
+                <FileListViewMode
+                    @update="(mode: FileViewMode) => fileViewMode = mode"
+                    :view-mode="fileViewMode"
+                />
 
-            <InfiniteLoading
-                v-if="!loadCompleted"
-                @infinite="loadMore"
-                :distance="193"
-            >
-                <template #spinner>
-                    <PageLoading
-                        class="pb-6 pt-3
-                        md:pt-0"
-                    />
-                </template>
-                <template #error="{ retry }">
-                    <PageError
-                        @retry="retry"
-                        :errorCode="loadMoreErrorCode"
-                        class="pt-0"
-                    />
-                </template>
-                <template #complete></template>
-            </InfiniteLoading>
+                <button
+                    @click="load"
+                    type="button"
+                    class="bg-white border border-transparent flex items-center justify-center rounded-full size-9
+                    focus:bg-stone-300
+                    hover:bg-stone-300"
+                >
+                    <IconMDIReload color="#000" />
+                </button>
+            </div>
         </div>
 
-        <!--  <FileLogModal
-            @close="toggleModal(null)"
-            :file="fileForModal"
-            :open="fileModal.log"
+        <FileListEmpty
+            v-if="itemsKey.length === 0"
+            @refresh="load"
         />
-        <FileManageAccessModal
-            @close="toggleModal(null)"
-            :file="fileForModal"
-            :open="fileModal.access"
-        />
-        <FileShareModal
-            @close="toggleModal(null)"
-            :file="fileForModal"
-            :open="fileModal.share"
-        /> -->
-        <FileDeleteModal
-            @close="toggleModal(null)"
-            @delete:file="fileDeleted"
-            :file="fileForModal"
-            :open="fileModal.delete"
-        />
-        <FileEditModal
-            @close="toggleModal(null)"
-            @update:file="fileUpdated"
-            :file="fileForModal"
-            :open="fileModal.edit"
-        />
-        <FileViewerModal
-            @close="toggleModal(null)"
-            @update:file="fileUpdated"
-            :as-modal="true"
-            :file="fileForModal"
-            :open="fileModal.view"
-        />
+        <template v-else>
+            <div>
+                <FileListHeadingForListMode v-if="showFileListHeading" :show-owner="true" />
+
+                <div
+                    :class="{
+                        'gap-3 grid grid-cols-2 p-3 md:gap-6 md:p-6 lg:grid-cols-4 2xl:grid-cols-8': fileViewMode === 'grid',
+                        'divide-y divide-stone-300 flex flex-col md:divide-y-0 md:gap-1 md:pb-6 md:pt-3 md:px-6 lg:gap-3 lg:pt-0': fileViewMode === 'list'
+                    }"
+                >
+                    <FileCard
+                        v-for="uuid in itemsKey"
+                        @open-modal="(modalName: string) => toggleModal(modalName, uuid)"
+                        :file="items[uuid]"
+                        :key="uuid"
+                        :show-owner="true"
+                        :view-mode="fileViewMode"
+                    />
+                </div>
+
+                <InfiniteLoading v-if="!isLoadMoreCompleted" @infinite="loadMore">
+                    <template #spinner>
+                        <PageLoading
+                            class="pb-6! pt-3!
+                            md:pt-0!"
+                        />
+                    </template>
+                    <template #error="{ retry }">
+                        <PageError
+                            @retry="retry"
+                            :error-code="loadMoreErrorCode"
+                            class="pt-0!"
+                        />
+                    </template>
+                    <template #complete></template>
+                </InfiniteLoading>
+            </div>
+
+            <ModalFileDetail
+                @close="toggleModal"
+                @not-found="fileNotFound(fileModalUuid)"
+                :file="fileForModal"
+                :open="fileModal.detail"
+            />
+            <ModalFileRename
+                @close="toggleModal"
+                @not-found="fileNotFound(fileModalUuid)"
+                @updated="fileUpdate"
+                :file="fileForModal"
+                :open="fileModal.rename"
+            />
+            <!-- <ModalFileShare
+                @close="toggleModal"
+                @not-found="fileNotFound(fileModalUuid)"
+                :file="fileForModal"
+                :open="fileModal.share"
+            /> -->
+            <ModalFileTrash
+                @close="toggleModal"
+                @trashed="fileTrashed"
+                :file="fileForModal"
+                :open="fileModal.trash"
+            />
+            <ModalFileViewer
+                @close="toggleModal"
+                @not-found="fileNotFound(fileModalUuid)"
+                @updated="fileUpdate"
+                @status-updated="(status: FileStatus) => fileUpdateStatus(fileModalUuid, status)"
+                :file="fileForModal"
+                :open="fileModal.view"
+            />
+            <ModalFileVisibility
+                @close="toggleModal"
+                @not-found="fileNotFound(fileModalUuid)"
+                @updated="fileUpdate"
+                :file="fileForModal"
+                :open="fileModal.visibility"
+            />
+        </template>
     </div>
 </template>
