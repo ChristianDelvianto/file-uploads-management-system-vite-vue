@@ -1,11 +1,13 @@
-import authModule from './auth'
-import fileModule from './file'
-import windowModule from './window'
+import auth from './auth'
+import file from './file'
+import plan from './plan'
+import upload from './upload'
+import window from './window'
 
-const modules = {
-    auth: authModule,
-    file: fileModule,
-    window: windowModule,
+export default {
+    auth,
+    file,
+    plan,
+    upload,
+    window
 }
-
-export default modules
