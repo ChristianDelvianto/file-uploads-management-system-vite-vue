@@ -1,10 +1,15 @@
-import { MutationTree } from 'vuex/types/index.js'
-import { StoreState } from './types'
+import { ModuleState } from '@/types/window'
 
-const mutations: MutationTree<StoreState> = {
-    SET_WIDTH: (state, payload: number) => {
-        state.width = payload
-    }
+/**
+ * Modify `width`.
+ * 
+ * @params number `Window inner width`
+ * @returns void
+ */
+function SET_WIDTH(state: ModuleState, value: number): void {
+    state.width = value
 }
 
-export default mutations
+export default {
+    SET_WIDTH
+}
