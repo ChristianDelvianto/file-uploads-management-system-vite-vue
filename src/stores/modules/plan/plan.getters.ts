@@ -1,8 +1,5 @@
-import { GetterTree } from 'vuex/types/index.js'
-import { StoreState } from './types'
+import { ModuleState } from '@/types/plan'
 
-const getters: GetterTree<StoreState, {}> = {
-    // 
+export default {
+    items: (state: ModuleState) => state.items
 }
-
-export default getters
