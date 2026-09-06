@@ -1,10 +1,11 @@
-import { StoreState } from './types'
-
-const state: StoreState = {
+export default {
     authenticated: false,
-    loggedOut: false,
+    logged_out: false,
     profile: null,
-    role: 'user', // default
-}
+    used_bytes: 0,
 
-export default state
+    // Plan
+    plan_id: 1,
+    plan_limit_bytes: 0,
+    plan_name: 'Free'
+}
