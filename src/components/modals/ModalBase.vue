@@ -1,12 +1,22 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted } from 'vue'
 
-const emits = defineEmits<{
+const emit = defineEmits<{
     (eventName: 'close'): void
 }>()
 
+const props = withDefaults(defineProps<Readonly<{
+    enableBackgroundBlur?: boolean,
+    enableBackgroundClickToClose?: boolean
+}>>(), {
+    enableBackgroundBlur: true,
+    enableBackgroundClickToClose: false
+})
+
 function close(): void {
-    emits('close')
+    if (props.enableBackgroundClickToClose) {
+        emit('close')
+    }
 }
 
 onMounted(() => {
@@ -19,12 +29,16 @@ onBeforeUnmount(() => {
 
 <template>
     <div class="fixed inset-0 z-10">
-        <button
+        <div
             @click="close"
+            :class="{
+                'backdrop-blur-xs': $props.enableBackgroundBlur,
+                'cursor-default': !$props.enableBackgroundClickToClose
+            }"
             tabindex="-1"
             type="button"
-            class="absolute bg-black/80 backdrop-blur-[2px] inset-0 scale-100 z-0"
-        ></button>
+            class="absolute bg-black/80 inset-0 scale-100 z-0"
+        ></div>
 
         <slot />
     </div>
