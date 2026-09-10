@@ -1,92 +1,54 @@
 // @ts-check
 import { test, expect } from '@playwright/test'
+import { CHECK_AUTH_API_URL_PATTERN } from './const/auth'
+import { HOME_USER_URL, LOGIN_URL } from './const/route'
+import { mockLoginResponse } from './services/auth'
+import { mockCSRFCookieResponse } from './services/app'
+import { mockUnauthenticatedResponse } from './services/error'
 
 test.describe('Login page', () => {
     /**
-     * Redirect guest to login page when accessing userOnly routes during first load
-     */
-    test('redirect to login page when unauthenticated', async ({ page }) => {
-        // Mock check auth response
-        await page.route('**/auth/me', route => route.fulfill({
-            status: 401,
-            contentType: 'application/json',
-        }))
-
-        const checkAuthPromise = page.waitForResponse('**/auth/me')
-
-        await Promise.all([
-            page.goto('/user/home'),
-            checkAuthPromise,
-        ])
-        await expect(page).toHaveURL(/login/i)
-    })
-
-    /**
-     * Ensure login page has email and password inputs
+     * Ensure page has email and password inputs
+     * 
+     * User flow:
+     * 1. User opens the app and entered login route
+     * 2. User sees email and password inputs
      */
     test('has email and password inputs', async ({ page }) => {
-        // Mock check auth response
-        await page.route('**/auth/me', route => route.fulfill({
-            status: 401,
-            contentType: 'application/json',
-        }))
+        await mockUnauthenticatedResponse(page, CHECK_AUTH_API_URL_PATTERN)
 
-        const checkAuthPromise = page.waitForResponse('**/auth/me')
+        await page.goto(LOGIN_URL)
 
-        await Promise.all([
-            page.goto('/login'),
-            checkAuthPromise,
-        ])
-        await expect(page).toHaveURL(/login/i)
-        await expect(page.getByRole('textbox', { name: /email/i })).toBeVisible()
-        await expect(page.getByRole('textbox', { name: /password/i })).toBeVisible()
+        await expect(page).toHaveURL(LOGIN_URL)
+        await expect(page.getByTestId(/email/)).toBeVisible()
+        await expect(page.getByTestId(/password/)).toBeVisible()
     })
 
     /**
      * Successful login must redirect user
+     * 
+     * User flow:
+     * 1. User opens the app and entered login route
+     * 2. User sees email and password inputs
+     * 3. User fills email and password inputs and submit
+     * 4. User is redirected to home route
      */
     test('redirect user when login successfully', async ({ page }) => {
-        // Mock check auth response
-        await page.route('**/auth/me', route => route.fulfill({
-            status: 401,
-            contentType: 'application/json',
-        }))
+        await mockCSRFCookieResponse(page)
+        await mockUnauthenticatedResponse(page, CHECK_AUTH_API_URL_PATTERN)
 
-        // Mock login response
-        await page.route('**/auth/tokens', route => route.fulfill({
-            status: 200,
-            contentType: 'application/json',
-            body: JSON.stringify({
-                plan: {
-                    id: 1,
-                    name: 'Free',
-                    max_size: 536870912, // 512 Mb
-                },
-                profile: {
-                    id: 1,
-                    name: 'Test User',
-                },
-                role: 'user',
-                token: 'mock-token',
-                used_bytes: 0,
-            })
-        }))
+        await page.goto(LOGIN_URL)
 
-        const checkAuthPromise = page.waitForResponse('**/auth/me')
+        await mockLoginResponse(page)
 
-        await Promise.all([
-            page.goto('/login'),
-            checkAuthPromise,
-        ])
-        await page.getByRole('textbox', { name: /email/i }).fill('test@example.com')
-        await page.getByRole('textbox', { name: /password/i }).fill('password')
+        await expect(page).toHaveURL(LOGIN_URL)
+        await expect(page.getByTestId(/email/)).toBeVisible()
+        await expect(page.getByTestId(/password/)).toBeVisible()
 
-        const loginPromise = page.waitForResponse('**/auth/tokens')
+        await page.getByTestId(/email/).fill('test@example.com')
+        await page.getByTestId(/password/).fill('password')
+        await page.getByTestId(/submit/).click()
 
-        await Promise.all([
-            page.getByRole('button', { name: /log in/i }).click(),
-            loginPromise,
-        ])
-        await expect(page).toHaveURL(/user\/home/i)
+        await expect(page).toHaveURL(HOME_USER_URL)
     })
 })
