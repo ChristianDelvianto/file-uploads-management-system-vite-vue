@@ -2,6 +2,7 @@
 import PageError from './components/page/PageError.vue'
 import PageLoading from './components/page/PageLoading.vue'
 import { usePage } from './composables/usePage'
+import { isCookieEnabled } from './utils/app.ts'
 import { useStore } from 'vuex'
 import { useRoute, useRouter } from 'vue-router'
 import { onBeforeMount } from 'vue'
@@ -34,7 +35,7 @@ async function startApp(): Promise<void> {
   pageLoading(true)
 
   try {
-    if (navigator.cookieEnabled === false) {
+    if (isCookieEnabled() === false) {
       pageErrorCode.value = 2
       pageIsError(pageErrorCode.value)
 
@@ -47,8 +48,6 @@ async function startApp(): Promise<void> {
       await router.replace({ name: 'user.dashboard' })
     }
   } catch (err: unknown) {
-    console.error('Error startApp: ', err)
-
     await handleStartAppError(err)
   } finally {
     pageLoading(false)
