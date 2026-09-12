@@ -1,4 +1,6 @@
 import './style.css'
+import * as pdfjsLib from 'pdfjs-dist'
+import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.mjs?url'
 import { createApp } from 'vue'
 import store from './stores'
 import router from './router'
@@ -10,9 +12,12 @@ declare global {
     const APP_VERSION: string
 }
 
+// Set the PDF.js worker source
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker
+
 // Set API default base URL
 Api.defaults.baseURL = import.meta.env.VITE_API_BASE_URL || '/api/v1'
-Api.defaults.timeout = 60_000
+Api.defaults.timeout = 10_000
 
 const vue = createApp(App)
 vue.use(store)
